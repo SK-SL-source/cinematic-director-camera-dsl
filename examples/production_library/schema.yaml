@@ -1,0 +1,38 @@
+# Schema of production_examples.yaml (checked by tests/test_example_library.py).
+# The library never defines camera language: every command it names comes from registry/canonical_commands.yaml.
+schema_version: "1.0"
+batches:
+  NARRATIVE_30: "story situations from AI video scripts, with effects, editing and time effects kept apart from the camera"
+  TECHNIQUE_36: "everyday camera phrases, one technique each"
+mapping_classes:
+  DIRECT: "one candidate DSL states the whole camera intent"
+  COMPOSITE: "several commands together state the camera intent"
+  CONTEXT_REQUIRED: "the phrase leaves out what decides between the candidates; the resolver asks instead of choosing, a default is only marked"
+  AMBIGUOUS: "two or more readings and no default; the resolver asks"
+  DIRECT_PLUS_FX: "a direct camera intent plus visual effects that stay outside the camera"
+  CAMERA_PLUS_TEMPORAL: "a camera move plus a time effect, such as freeze or slow motion, that stays outside the camera"
+  CAMERA_STATE_PLUS_TEMPORAL: "a camera position with no move, plus a time effect"
+  NON_CAMERA: "no camera instruction at all; nothing is added"
+  NON_CAMERA_EDITING: "an editing device such as a dissolve or a flashback; camera only where the situation states it"
+  NON_CAMERA_FX: "a visual effect; no camera move is implied"
+  MULTI_SHOT: "several shots with continuity between them"
+  CAMERA_PLUS_EDITING: "a camera element plus an editing device; the move depends on the scene, so the resolver asks"
+needs_context_classes: ["CONTEXT_REQUIRED", "AMBIGUOUS", "CAMERA_PLUS_EDITING"]
+non_camera_keys: ["action", "temporal", "editing", "fx", "lighting", "color", "style"]
+fields:
+  id: "EX-NNN, unique"
+  title_zh: "the everyday name of the situation; an example label, never a command or an alias"
+  batch: "NARRATIVE_30 or TECHNIQUE_36"
+  mapping_class: "one of mapping_classes"
+  natural_language_intent_zh: "what the shot should look like, in plain words"
+  camera_dsl: "list of canonical command tokens forming the one candidate; empty when the class asks for context, is multi-shot or has no camera instruction"
+  candidates: "needs-context classes: list of {dsl, when_zh, default}; default only marks the usual reading, it is never chosen silently"
+  question_zh: "needs-context classes: the question that decides between the candidates"
+  shots: "MULTI_SHOT: list of {label, role_zh, dsl}"
+  alternatives: "optional: other valid readings for a known situation, {dsl, when_zh}; never applied automatically"
+  refinements: "optional: more precise commands once the camera's position is known, {dsl, when_zh}"
+  camera_semantics: "notes on what the camera does and does not do"
+  non_camera: "optional: map of non_camera_keys to lists; never turned into camera commands"
+  ambiguity: "optional: what the phrase leaves open"
+  tags: "search words, Chinese and English"
+  build_notes: "optional: every change made to the seed DSL so that it passes the parser, with the reason"

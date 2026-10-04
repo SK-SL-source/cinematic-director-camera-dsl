@@ -1,0 +1,2144 @@
+# Canonical Command Registry — cinematic-director-camera-dsl
+# The single home of command meaning. Everything else (references tables, adapters' markers,
+# tests) is checked against this file by scripts/audit.py.
+#
+# Field guide (per command)
+#   command / canonical_name / category   identity
+#   kind          state | movement | rig | lens | focus | composition | continuity | style
+#   definition    what it means, in this project's own words
+#   critical_rule the one mistake that must never happen (optional)
+#   params        allowed argument slots, in the order they are usually written (see meta.param_slots)
+#   writes        dimensions this command sets (core values; contradicting them is a conflict)
+#   defaults      dimensions it sets only when nothing explicit says otherwise (overridable, no conflict)
+#   specializes   a more general canonical command this one refines (merge, not conflict)
+#   sources       SOURCE IDs from research/01_sources.md ([] only for PROJECT_DEFINED)
+#   confidence    HIGH | MEDIUM | LOW | PROJECT_DEFINED   (rules: research/07 D27)
+#   aliases       alias tokens that resolve here (full list with relationships: aliases.yaml)
+#   conflicts     representative conflicting commands (full logic: conflict_matrix.yaml)
+#   compatible_with representative valid partners (evidence: compatibility_matrix.yaml)
+#   image_behavior / video_behavior   what adapters must express in each mode
+#   markers       regexes; an adapter's output must match at least one per language
+#   anti_markers  regexes that must NOT appear when this command is the only one in its dimension
+
+meta:
+  version: "2.0.0"  # V2_BASELINE (BASELINE_V2.md); every later change is logged in CHANGELOG.md
+  date: "2026-09-30"
+  frame_convention: "Every L/R argument is camera-relative (= screen-relative). ORBIT:R = camera travels toward camera-right = counterclockwise seen from above."
+  lens_convention: "Focal lengths are 35mm full-frame equivalent (SRC-004 cinlang:10-15)."
+  speed_scale: [IMPERCEPTIBLE, VSLOW, SLOW, STEADY, BRISK, FAST]
+  size_ladder: {EWS: 1, WS: 2, FS: 2, MFS: 2, COWBOY: 2, MS: 3, MCU: 4, CU: 5, ECU: 6}
+  pitch_order: [VERTICAL_UP, LOW, LEVEL, HIGH, VERTICAL_DOWN]
+  height_order: [GROUND, ANKLE, KNEE, HIP, CHEST, SHOULDER, EYE, ELEVATED, AERIAL]
+  param_slots:
+    dir_lr: "L | R"
+    dir_ud: "UP | DOWN"
+    dir_io: "IN | OUT"
+    dir_rot: "CW | CCW"
+    dir_orbit: "L | R | CW | CCW"
+    dir_reveal: "UP | BACK"
+    speed: "IMPERCEPTIBLE | VSLOW | SLOW | STEADY | BRISK | FAST"
+    percent: "e.g. 20%"
+    degrees: "e.g. 90 or 90DEG"
+    distance: "e.g. 1M or 30CM"
+    magnitude: "SMALL | MEDIUM | LARGE | PARTIAL | FULL"
+    size_range: "START>END sizes, e.g. MS>MCU"
+    relation: "A>B, FG>BG, A>CAM, A>OFFL, A>OFFR, A>OFFUP, A>OFFDOWN"
+    axis: "A-B (A screen-left, B screen-right)"
+    screen: "L2R | R2L | TOWARD | AWAY"
+    subject: "a subject id: A, B, ANNA ..."
+    label: "a free word naming an object or place: LETTER, DOOR ..."
+    mm: "focal length, e.g. 35 or 35MM"
+    intensity: "SUBTLE | STRONG"
+    angle_intensity: "SLIGHT | STEEP"
+    level: "TIGHT | NORMAL | LOOSE"
+    method: "MOVE | NEUTRAL | CUTAWAY | REESTABLISH | BLOCKING"
+    kind: "SHAPE | MOTION | COMPOSITION"
+    side: "L | R | UP | DOWN"
+
+commands:
+
+  # ------------------------------------------------------------------ SHOT_SIZE
+  EWS:
+    command: /EWS
+    canonical_name: extreme_wide_shot
+    category: SHOT_SIZE
+    kind: state
+    definition: "The subject is very small (about an eighth of the frame height or less) inside a vast environment; the place dominates."
+    params: []
+    writes: {shot.size: EWS}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/ELS, /EXTREMEWIDE, /EXTREMELONGSHOT, /XWS]
+    conflicts: [WS, CU, ECU, MACRO, INSERT]
+    compatible_with: [HIGHANGLE, DRONEVIEW, AERIAL, NEGSPACE, DOLLYOUT]
+    image_behavior: "Frame the subject tiny in a vast space."
+    video_behavior: "Opening or holding frame with the subject tiny in a vast space."
+    markers:
+      en: ["extreme wide"]
+      zh: ["大远景"]
+
+  WS:
+    command: /WS
+    canonical_name: wide_shot
+    category: SHOT_SIZE
+    kind: state
+    definition: "The whole body is visible and the surroundings take a large share of the frame. A shot SIZE, never a lens."
+    critical_rule: "Never resolve WS to a wide-angle lens, and never resolve WIDEANGLE to WS."
+    params: []
+    writes: {shot.size: WS}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/WIDESHOT, /WIDE, /LS, /LONGSHOT]
+    conflicts: [MS, CU, ECU, INSERT]
+    compatible_with: [WIDEANGLE, TELEPHOTO, TRACKSIDE, EYELEVEL]
+    image_behavior: "Frame the full figure with plenty of surroundings."
+    video_behavior: "Frame the full figure with plenty of surroundings."
+    markers:
+      en: ["(?<!extreme )wide shot"]
+      zh: ["(?<!大)远景"]
+    anti_markers:
+      en: ["wide-angle lens", "\\d+ ?mm"]
+
+  FS:
+    command: /FS
+    canonical_name: full_shot
+    category: SHOT_SIZE
+    kind: state
+    definition: "The subject fills the frame height from head to toe, with little room above and below."
+    params: []
+    writes: {shot.size: FS}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005]
+    confidence: HIGH
+    aliases: [/FULLBODY, /FULLSHOT]
+    conflicts: [MS, CU]
+    compatible_with: [GROUNDLEVEL, TRACKSIDE, GIMBAL, LOWANGLE]
+    image_behavior: "Frame the subject from head to toe; the feet stay inside the frame."
+    video_behavior: "Keep the subject from head to toe inside the frame; the feet stay in frame for the whole shot unless a movement changes the size."
+    markers:
+      en: ["head to toe", "(?<!medium )full shot"]
+      zh: ["(?<!中)全景", "从头到脚"]
+
+  MFS:
+    command: /MFS
+    canonical_name: medium_full_shot
+    category: SHOT_SIZE
+    kind: state
+    definition: "Framed from the knees up."
+    params: []
+    writes: {shot.size: MFS}
+    sources: [SRC-002, SRC-004]
+    confidence: HIGH
+    aliases: [/MEDIUMFULL, /MWS, /MEDIUMWIDE, /MLS]
+    conflicts: [MS, FS]
+    compatible_with: [TWOSHOT, EYELEVEL, STEADICAM]
+    image_behavior: "Frame the subject from the knees up."
+    video_behavior: "Frame the subject from the knees up."
+    markers:
+      en: ["knees up"]
+      zh: ["中全景", "膝盖以上"]
+
+  COWBOY:
+    command: /COWBOY
+    canonical_name: cowboy_shot
+    category: SHOT_SIZE
+    kind: state
+    definition: "Framed from mid-thigh up."
+    params: []
+    writes: {shot.size: COWBOY}
+    sources: [SRC-002]
+    confidence: LOW
+    aliases: [/COWBOYSHOT, /AMERICANSHOT]
+    conflicts: [MS, FS]
+    compatible_with: [LOWANGLE, TWOSHOT]
+    image_behavior: "Frame the subject from mid-thigh up."
+    video_behavior: "Frame the subject from mid-thigh up."
+    markers:
+      en: ["mid-thigh"]
+      zh: ["大腿中部"]
+
+  MS:
+    command: /MS
+    canonical_name: medium_shot
+    category: SHOT_SIZE
+    kind: state
+    definition: "Framed from the waist up."
+    params: []
+    writes: {shot.size: MS}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, LOCAL-002]
+    confidence: HIGH
+    aliases: [/MEDIUMSHOT, /MEDIUM, /MID]
+    conflicts: [WS, CU, ECU]
+    compatible_with: [LOWANGLE, DOLLYIN, OTS, EYELEVEL, LENS]
+    image_behavior: "Frame the subject from the waist up."
+    video_behavior: "Frame the subject from the waist up (the opening frame when a movement changes the size)."
+    markers:
+      en: ["medium shot", "waist up"]
+      zh: ["(?<![全近])中景"]
+
+  MCU:
+    command: /MCU
+    canonical_name: medium_close_up
+    category: SHOT_SIZE
+    kind: state
+    definition: "Framed from the chest up."
+    params: []
+    writes: {shot.size: MCU}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, LOCAL-002]
+    confidence: HIGH
+    aliases: [/MEDIUMCLOSEUP]
+    conflicts: [WS, ECU]
+    compatible_with: [OTS, SHALLOW, PORTRAITLENS, EYELINE]
+    image_behavior: "Frame the subject from the chest up."
+    video_behavior: "Frame the subject from the chest up."
+    markers:
+      en: ["medium close-up", "chest up"]
+      zh: ["近景"]
+
+  CU:
+    command: /CU
+    canonical_name: close_up
+    category: SHOT_SIZE
+    kind: state
+    definition: "Head and shoulders; the face carries the frame."
+    params: []
+    writes: {shot.size: CU}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-006, LOCAL-001]
+    confidence: HIGH
+    aliases: [/CLOSEUP, /CLOSE]
+    conflicts: [EWS, WS, MS]
+    compatible_with: [SHALLOW, PORTRAITLENS, LOWANGLE, RACKFOCUS]
+    image_behavior: "Frame the face (head and shoulders)."
+    video_behavior: "Frame the face (head and shoulders); the head stays inside the frame."
+    markers:
+      en: ["(?<!medium )(?<!extreme )close-up"]
+      zh: ["(?<!大)特写"]
+
+  ECU:
+    command: /ECU
+    canonical_name: extreme_close_up
+    category: SHOT_SIZE
+    kind: state
+    definition: "A single detail fills the frame: an eye, a mouth, a hand, an object part."
+    params: []
+    writes: {shot.size: ECU}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/EXTREMECLOSEUP, /XCU, /BCU]
+    conflicts: [EWS, WS, TWOSHOT]
+    compatible_with: [MACRO, INSERT, SHALLOW]
+    image_behavior: "One detail fills the frame."
+    video_behavior: "One detail fills the frame."
+    markers:
+      en: ["extreme close-up"]
+      zh: ["大特写"]
+
+  # ------------------------------------------------------------ SUBJECT_FRAMING
+  SINGLE:
+    command: /SINGLE
+    canonical_name: single
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "Only one person is in frame."
+    params: [subject]
+    writes: {shot.subject_count: "1"}
+    sources: [SRC-004]
+    confidence: LOW
+    aliases: [/SINGLESHOT, /CLEANSINGLE]
+    conflicts: [TWOSHOT, GROUPSHOT, DIRTYOTS]
+    compatible_with: [CLEANOTS, MCU, CU]
+    image_behavior: "Only one person in the frame."
+    video_behavior: "Only one person in the frame for the whole shot."
+    markers:
+      en: ["only one person", "alone in (the )?frame", "single"]
+      zh: ["单人"]
+
+  TWOSHOT:
+    command: /TWOSHOT
+    canonical_name: two_shot
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "Two subjects share the frame."
+    params: [subject, subject]
+    writes: {shot.subject_count: "2"}
+    sources: [SRC-002, SRC-004]
+    confidence: HIGH
+    aliases: [/2SHOT]
+    conflicts: [SINGLE, ECU, INSERT]
+    compatible_with: [MS, MFS, AXIS, DEEPSTAGING]
+    image_behavior: "Both subjects in one frame."
+    video_behavior: "Both subjects stay in one frame."
+    markers:
+      en: ["two-shot", "both .* in (the )?frame"]
+      zh: ["双人镜头"]
+
+  THREESHOT:
+    command: /THREESHOT
+    canonical_name: three_shot
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "Three subjects share the frame."
+    params: []
+    writes: {shot.subject_count: "3"}
+    sources: [SRC-004]
+    confidence: LOW
+    aliases: [/3SHOT]
+    conflicts: [SINGLE, TWOSHOT, ECU]
+    compatible_with: [WS, MFS, DEEPSTAGING]
+    image_behavior: "Three subjects in one frame."
+    video_behavior: "Three subjects stay in one frame."
+    markers:
+      en: ["three-shot", "all three"]
+      zh: ["三人镜头"]
+
+  GROUPSHOT:
+    command: /GROUPSHOT
+    canonical_name: group_shot
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "Four or more subjects share the frame."
+    params: []
+    writes: {shot.subject_count: GROUP}
+    sources: [SRC-001, SRC-005]
+    confidence: LOW
+    aliases: [/GROUP, /ENSEMBLE]
+    conflicts: [SINGLE, TWOSHOT, CU, ECU]
+    compatible_with: [WS, HIGHANGLE, TOPDOWN]
+    image_behavior: "The whole group in one frame."
+    video_behavior: "The whole group stays in one frame."
+    markers:
+      en: ["group shot", "whole group"]
+      zh: ["群像"]
+
+  OTS:
+    command: /OTS
+    canonical_name: over_the_shoulder
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "The camera stands behind A's shoulder looking at B; part of A (shoulder/back of head) is in the near foreground. /OTS:A>B."
+    params: [relation]
+    writes: {shot.viewpoint: OTS}
+    defaults: {shot.ots_variant: DIRTY}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/OVERTHESHOULDER, /OVERSHOULDER]
+    conflicts: [POV, SINGLE]
+    compatible_with: [MCU, MS, SRS, EYELINE, AXIS, SHALLOW]
+    image_behavior: "A's shoulder and the back of A's head in the near foreground, B facing the camera beyond."
+    video_behavior: "A's shoulder stays in the near foreground while B is the subject of the shot."
+    markers:
+      en: ["over the shoulder", "over-the-shoulder"]
+      zh: ["过肩"]
+
+  DIRTYOTS:
+    command: /DIRTYOTS
+    canonical_name: dirty_over_the_shoulder
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "Over-the-shoulder with the foreground person's shoulder and head clearly in frame."
+    params: [relation]
+    writes: {shot.viewpoint: OTS, shot.ots_variant: DIRTY}
+    specializes: OTS
+    sources: [SRC-004]
+    confidence: LOW
+    aliases: [/DIRTYSINGLE]
+    conflicts: [CLEANOTS, SINGLE, POV]
+    compatible_with: [MCU, SRS]
+    image_behavior: "The foreground shoulder and part of the head occupy a frame edge."
+    video_behavior: "The foreground shoulder and part of the head stay at a frame edge."
+    markers:
+      en: ["shoulder .*foreground|foreground .*shoulder"]
+      zh: ["前景.*肩"]
+
+  CLEANOTS:
+    command: /CLEANOTS
+    canonical_name: clean_over_the_shoulder
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "The camera sits at the over-the-shoulder position, but the foreground person is kept out of frame (a clean single from that side)."
+    params: [relation]
+    writes: {shot.viewpoint: OTS, shot.ots_variant: CLEAN}
+    specializes: OTS
+    sources: [SRC-004]
+    confidence: LOW
+    aliases: []
+    conflicts: [DIRTYOTS, TWOSHOT]
+    compatible_with: [SINGLE, MCU, SRS]
+    image_behavior: "Seen from over the shoulder, but the foreground person is outside the frame."
+    video_behavior: "The foreground person stays outside the frame for the whole shot."
+    markers:
+      en: ["stays out of (the )?frame", "outside the frame"]
+      zh: ["前景人物不入画"]
+
+  POV:
+    command: /POV
+    canonical_name: point_of_view
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "The camera IS A's eyes; A is not visible (except hands/body parts only if the user writes them). /POV:A."
+    critical_rule: "POV is not 'the subject looks at the camera' (that is /EYELINE:X>CAM) and not FPV (a drone rig)."
+    params: [subject]
+    writes: {shot.viewpoint: POV}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005B, LOCAL-001]
+    confidence: HIGH
+    aliases: [/FIRSTPERSON, /SUBJECTIVE]
+    conflicts: [OTS, DIRTYOTS]
+    compatible_with: [EYELEVEL, HANDHELD, INSERT, FPV]
+    image_behavior: "Seen through A's eyes; A is not in the frame."
+    video_behavior: "Seen through A's eyes for the whole shot; A never appears (no hands, shadow or reflection unless written)."
+    markers:
+      en: ["point of view", "through .*eyes", "first-person"]
+      zh: ["主观镜头"]
+    anti_markers:
+      en: ["looks? (directly )?(into|at) the (lens|camera)"]
+
+  FRONTAL:
+    command: /FRONTAL
+    canonical_name: frontal_view
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "The subject faces the camera square-on."
+    params: []
+    writes: {subject.orientation: FRONTAL}
+    sources: [SRC-004, SRC-001]
+    confidence: MEDIUM
+    aliases: [/FRONT, /FACING]
+    conflicts: [PROFILE, REAR, THREEQUARTER, FOLLOW]
+    compatible_with: [CENTER, SYMMETRY, LEAD]
+    image_behavior: "The subject faces the camera square-on."
+    video_behavior: "The subject faces the camera square-on."
+    markers:
+      en: ["faces the camera", "square-on", "facing the camera"]
+      zh: ["正面"]
+
+  THREEQUARTER:
+    command: /THREEQUARTER
+    canonical_name: three_quarter_view
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "The subject is turned about 45 degrees from the camera."
+    params: []
+    writes: {subject.orientation: THREEQUARTER}
+    sources: [SRC-001, SRC-002, SRC-004, LOCAL-002]
+    confidence: HIGH
+    aliases: [/3Q, /THREEQUARTERS]
+    conflicts: [PROFILE, REAR, FRONTAL]
+    compatible_with: [LOOKROOM, MCU, THIRDS]
+    image_behavior: "The subject is turned about 45 degrees from the camera."
+    video_behavior: "The subject is turned about 45 degrees from the camera."
+    markers:
+      en: ["three-quarter"]
+      zh: ["四分之三"]
+
+  PROFILE:
+    command: /PROFILE
+    canonical_name: profile_view
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "The subject is seen from the side (about 90 degrees)."
+    params: []
+    writes: {subject.orientation: PROFILE}
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/SIDEPROFILE, /SIDE]
+    conflicts: [FRONTAL, REAR, THREEQUARTER]
+    compatible_with: [TRACKSIDE, LOOKROOM, TRUCK]
+    image_behavior: "The subject seen from the side."
+    video_behavior: "The subject seen from the side."
+    markers:
+      en: ["profile", "from the side"]
+      zh: ["(?<!四分之三)侧面"]
+
+  REAR:
+    command: /REAR
+    canonical_name: rear_view
+    category: SUBJECT_FRAMING
+    kind: state
+    definition: "The subject's back is to the camera."
+    params: []
+    writes: {subject.orientation: REAR}
+    sources: [SRC-002, SRC-003, SRC-004]
+    confidence: MEDIUM
+    aliases: [/BACKVIEW, /FROMBEHIND]
+    conflicts: [FRONTAL, PROFILE, LEAD]
+    compatible_with: [FOLLOW, OTS, WS]
+    image_behavior: "The subject seen from behind."
+    video_behavior: "The subject seen from behind."
+    markers:
+      en: ["from behind", "back (is )?to the camera"]
+      zh: ["背面", "背影"]
+
+  # ---------------------------------------------------------------- CAMERA_ANGLE
+  EYELEVEL:
+    command: /EYELEVEL
+    canonical_name: eye_level
+    category: CAMERA_ANGLE
+    kind: state
+    definition: "The camera sits at the subject's eye height with a level lens axis: the neutral angle. Sets both height (EYE) and pitch (LEVEL)."
+    params: []
+    writes: {camera.pitch: LEVEL, camera.height: EYE}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-006]
+    confidence: HIGH
+    aliases: [/EYE, /LEVEL, /NEUTRALANGLE]
+    conflicts: [LOWANGLE, HIGHANGLE, TOPDOWN, GROUNDLEVEL, HIPLEVEL, AERIAL]
+    compatible_with: [POV, MS, DUTCH, TRACKSIDE]
+    image_behavior: "Camera at the subject's eye height, looking straight across."
+    video_behavior: "Camera at the subject's eye height, looking straight across."
+    markers:
+      en: ["eye level", "eye height"]
+      zh: ["平视"]
+
+  LOWANGLE:
+    command: /LOWANGLE
+    canonical_name: low_angle
+    category: CAMERA_ANGLE
+    kind: state
+    definition: "The camera looks UP at the subject (lens axis tilted upward). An angle, independent of camera height."
+    params: [angle_intensity]
+    writes: {camera.pitch: LOW}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-006, SRC-007]
+    confidence: HIGH
+    aliases: [/LOW, /HEROANGLE, /UPSHOT]
+    conflicts: [HIGHANGLE, TOPDOWN, BIRDSEYE, EYELEVEL]
+    compatible_with: [GROUNDLEVEL, MS, DOLLYIN, WIDEANGLE, CRANE]
+    image_behavior: "Camera below the subject looking up; the subject towers."
+    video_behavior: "Camera below the subject looking up."
+    markers:
+      en: ["low angle", "look(s|ing)? up"]
+      zh: ["仰拍"]
+
+  HIGHANGLE:
+    command: /HIGHANGLE
+    canonical_name: high_angle
+    category: CAMERA_ANGLE
+    kind: state
+    definition: "The camera looks DOWN at the subject at an oblique angle. Not straight down (that is TOPDOWN)."
+    critical_rule: "HIGHANGLE is oblique; it never becomes a 90-degree top-down view."
+    params: [angle_intensity]
+    writes: {camera.pitch: HIGH}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-007]
+    confidence: HIGH
+    aliases: [/HIGH, /DOWNSHOT]
+    conflicts: [LOWANGLE, TOPDOWN, WORMSEYE, EYELEVEL]
+    compatible_with: [ELEVATED, WS, CRANE, DRONEVIEW]
+    image_behavior: "Camera above the subject looking down at an angle (not straight down)."
+    video_behavior: "Camera above the subject looking down at an angle (not straight down)."
+    markers:
+      en: ["high angle", "look(s|ing)? down (at|on) .* at an angle"]
+      zh: ["俯拍"]
+    anti_markers:
+      en: ["straight down", "directly (above|overhead)", "top-down"]
+
+  TOPDOWN:
+    command: /TOPDOWN
+    canonical_name: top_down
+    category: CAMERA_ANGLE
+    kind: state
+    definition: "The lens axis points straight down (about 90 degrees). Height is not implied: a table flat-lay is top-down."
+    params: []
+    writes: {camera.pitch: VERTICAL_DOWN}
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: HIGH
+    aliases: [/OVERHEAD, /TOPSHOT, /FLATLAY, /GODSEYE]
+    conflicts: [HIGHANGLE, LOWANGLE, EYELEVEL, GROUNDLEVEL]
+    compatible_with: [BIRDSEYE, SYMMETRY, GROUPSHOT, ROLL]
+    image_behavior: "Looking straight down at the subject."
+    video_behavior: "Looking straight down at the subject."
+    markers:
+      en: ["straight down", "top-down"]
+      zh: ["顶拍", "垂直俯拍"]
+
+  BIRDSEYE:
+    command: /BIRDSEYE
+    canonical_name: birds_eye_view
+    category: CAMERA_ANGLE
+    kind: state
+    definition: "Looking straight down from very high above, so the ground reads like a map and people look small. Top-down angle PLUS great height."
+    critical_rule: "BIRDSEYE is not DRONEVIEW (oblique aerial) and not plain TOPDOWN (no height implied)."
+    params: []
+    writes: {camera.pitch: VERTICAL_DOWN, camera.height: AERIAL}
+    specializes: TOPDOWN
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: MEDIUM
+    aliases: [/BIRDSEYEVIEW, /BIRDS]
+    conflicts: [LOWANGLE, EYELEVEL, GROUNDLEVEL, HIGHANGLE]
+    compatible_with: [TOPDOWN, DRONE, EWS, SYMMETRY]
+    image_behavior: "From far above, straight down; the ground looks like a map."
+    video_behavior: "From far above, straight down; the ground looks like a map."
+    markers:
+      en: ["bird's-eye", "like a map"]
+      zh: ["鸟瞰"]
+    anti_markers:
+      en: ["drone view"]
+
+  WORMSEYE:
+    command: /WORMSEYE
+    canonical_name: worms_eye_view
+    category: CAMERA_ANGLE
+    kind: state
+    definition: "Looking (nearly) straight up at the subject; usually from the ground."
+    params: []
+    writes: {camera.pitch: VERTICAL_UP}
+    defaults: {camera.height: GROUND}
+    sources: [SRC-001, SRC-002, SRC-005]
+    confidence: HIGH
+    aliases: [/WORMSVIEW, /WORMSEYEVIEW, /WORMS]
+    conflicts: [HIGHANGLE, TOPDOWN, BIRDSEYE, AERIAL]
+    compatible_with: [GROUNDLEVEL, WIDEANGLE]
+    image_behavior: "From the ground looking straight up; the subject towers against the sky or ceiling."
+    video_behavior: "From the ground looking straight up."
+    markers:
+      en: ["straight up", "worm's-eye"]
+      zh: ["垂直仰拍", "虫视"]
+
+  DUTCH:
+    command: /DUTCH
+    canonical_name: dutch_angle
+    category: CAMERA_ANGLE
+    kind: state
+    definition: "The camera is rolled so the horizon is tilted (a static cant). /DUTCH:L|R names which way the frame leans; degrees optional."
+    critical_rule: "DUTCH is a roll offset, not a TILT."
+    params: [dir_lr, degrees]
+    writes: {camera.roll_offset: DUTCH}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-009]
+    confidence: HIGH
+    aliases: [/DUTCHTILT, /DUTCHANGLE, /CANTED, /CANTEDANGLE, /OBLIQUE]
+    conflicts: [SYMMETRY]
+    compatible_with: [DOLLYIN, LOWANGLE, HANDHELD, EYELEVEL]
+    image_behavior: "The horizon is tilted; verticals lean."
+    video_behavior: "The horizon stays tilted for the whole shot."
+    markers:
+      en: ["dutch", "tilted horizon|horizon (is |stays )?tilted|canted"]
+      zh: ["斜角", "荷兰角"]
+
+  # --------------------------------------------------------------- CAMERA_HEIGHT
+  GROUNDLEVEL:
+    command: /GROUNDLEVEL
+    canonical_name: ground_level
+    category: CAMERA_HEIGHT
+    kind: state
+    definition: "The camera rests on or just above the ground (0-0.3 m). A HEIGHT: the lens can still look level."
+    critical_rule: "GROUNDLEVEL is not LOWANGLE; do not add an upward look unless /LOWANGLE or /WORMSEYE is given."
+    params: []
+    writes: {camera.height: GROUND}
+    sources: [SRC-002, SRC-004, SRC-005, SRC-001]
+    confidence: HIGH
+    aliases: [/GROUND, /FLOORLEVEL, /FLOOR]
+    conflicts: [EYELEVEL, AERIAL, TOPDOWN, BIRDSEYE, DRONEVIEW]
+    compatible_with: [LOWANGLE, WORMSEYE, FS, TRACKSIDE, WIDEANGLE]
+    image_behavior: "Lens just above the ground; the floor or ground fills the bottom of the frame."
+    video_behavior: "Lens stays just above the ground."
+    markers:
+      en: ["ground level", "just above the (ground|floor)"]
+      zh: ["贴地"]
+    anti_markers:
+      en: ["low angle", "look(s|ing)? up"]
+
+  ANKLELEVEL:
+    command: /ANKLELEVEL
+    canonical_name: ankle_level
+    category: CAMERA_HEIGHT
+    kind: state
+    definition: "The camera sits at about the subject's ankle height (about 10-20 cm)."
+    params: []
+    writes: {camera.height: ANKLE}
+    sources: []
+    confidence: PROJECT_DEFINED
+    aliases: [/ANKLE]
+    conflicts: [EYELEVEL, AERIAL, TOPDOWN]
+    compatible_with: [LOWANGLE, FOLLOW, FS]
+    image_behavior: "Camera at ankle height."
+    video_behavior: "Camera stays at ankle height."
+    markers:
+      en: ["ankle height"]
+      zh: ["脚踝高度"]
+
+  KNEELEVEL:
+    command: /KNEELEVEL
+    canonical_name: knee_level
+    category: CAMERA_HEIGHT
+    kind: state
+    definition: "The camera sits at about knee height (about 0.5 m)."
+    params: []
+    writes: {camera.height: KNEE}
+    sources: [SRC-004]
+    confidence: LOW
+    aliases: [/KNEE]
+    conflicts: [EYELEVEL, AERIAL]
+    compatible_with: [LOWANGLE, MS]
+    image_behavior: "Camera at knee height."
+    video_behavior: "Camera stays at knee height."
+    markers:
+      en: ["knee height"]
+      zh: ["膝盖高度"]
+
+  HIPLEVEL:
+    command: /HIPLEVEL
+    canonical_name: hip_level
+    category: CAMERA_HEIGHT
+    kind: state
+    definition: "The camera sits at hip/waist height (about 0.9-1.0 m)."
+    params: []
+    writes: {camera.height: HIP}
+    sources: [SRC-001, SRC-004, SRC-005, SRC-006]
+    confidence: HIGH
+    aliases: [/HIP, /WAISTLEVEL, /WAIST]
+    conflicts: [EYELEVEL, AERIAL, GROUNDLEVEL]
+    compatible_with: [MS, LOWANGLE, STATIC]
+    image_behavior: "Camera at waist height."
+    video_behavior: "Camera stays at waist height."
+    markers:
+      en: ["waist height", "hip height"]
+      zh: ["齐腰"]
+
+  CHESTLEVEL:
+    command: /CHESTLEVEL
+    canonical_name: chest_level
+    category: CAMERA_HEIGHT
+    kind: state
+    definition: "The camera sits at chest height (about 1.2-1.4 m)."
+    params: []
+    writes: {camera.height: CHEST}
+    sources: [SRC-004, LOCAL-002]
+    confidence: MEDIUM
+    aliases: [/CHEST]
+    conflicts: [EYELEVEL, GROUNDLEVEL]
+    compatible_with: [MS, THREEQUARTER, STATIC]
+    image_behavior: "Camera at chest height."
+    video_behavior: "Camera stays at chest height."
+    markers:
+      en: ["chest height"]
+      zh: ["胸口高度"]
+
+  SHOULDERLEVEL:
+    command: /SHOULDERLEVEL
+    canonical_name: shoulder_level
+    category: CAMERA_HEIGHT
+    kind: state
+    definition: "The camera sits at shoulder height of a standing adult (about 1.4-1.5 m), just below eye height."
+    params: []
+    writes: {camera.height: SHOULDER}
+    sources: [SRC-001, SRC-003]
+    confidence: MEDIUM
+    aliases: [/SHOULDERHEIGHT]
+    conflicts: [EYELEVEL, GROUNDLEVEL]
+    compatible_with: [FOLLOW, HANDHELD, MS]
+    image_behavior: "Camera at shoulder height."
+    video_behavior: "Camera stays at shoulder height."
+    markers:
+      en: ["shoulder height"]
+      zh: ["肩膀高度"]
+
+  ELEVATED:
+    command: /ELEVATED
+    canonical_name: elevated
+    category: CAMERA_HEIGHT
+    kind: state
+    definition: "The camera is above eye height (about 1.8-3 m, e.g. on a step or small crane) but not airborne. A HEIGHT; the axis can stay level."
+    params: []
+    writes: {camera.height: ELEVATED}
+    sources: [SRC-001, SRC-004]
+    confidence: HIGH
+    aliases: [/ABOVEEYE, /RAISED]
+    conflicts: [EYELEVEL, GROUNDLEVEL, AERIAL]
+    compatible_with: [HIGHANGLE, WS, STATIC]
+    image_behavior: "Camera somewhat above head height."
+    video_behavior: "Camera stays somewhat above head height."
+    markers:
+      en: ["above head height", "elevated"]
+      zh: ["高于视线"]
+
+  AERIAL:
+    command: /AERIAL
+    canonical_name: aerial
+    category: CAMERA_HEIGHT
+    kind: state
+    definition: "The camera is airborne, well above the scene (drone or aircraft altitude)."
+    params: []
+    writes: {camera.height: AERIAL}
+    sources: [SRC-001, SRC-002, SRC-005]
+    confidence: HIGH
+    aliases: [/AERIALVIEW]
+    conflicts: [GROUNDLEVEL, EYELEVEL, HIPLEVEL, HANDHELD]
+    compatible_with: [DRONE, HIGHANGLE, TOPDOWN, EWS]
+    image_behavior: "Seen from the air, high above the scene."
+    video_behavior: "Seen from the air, high above the scene."
+    markers:
+      en: ["from the air", "high above", "aerial"]
+      zh: ["空中", "航拍"]
+
+  # ------------------------------------------------------------- CAMERA_ROTATION
+  PAN:
+    command: /PAN
+    canonical_name: pan
+    category: CAMERA_ROTATION
+    kind: movement
+    definition: "The camera stays in place and rotates horizontally (yaw). No travel, so no parallax between near and far objects."
+    critical_rule: "PAN is not TRUCK: the camera body does not move sideways."
+    params: [dir_lr, degrees, speed]
+    writes: {rot.yaw: "$dir"}
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, LOCAL-001]
+    confidence: HIGH
+    aliases: [/PANLEFT, /PANRIGHT, /PANL, /PANR]
+    conflicts: [STATIC, ORBIT]
+    compatible_with: [TRUCK, TRIPOD, ZOOMIN, CRANE, DOLLYOUT]
+    image_behavior: "Cannot pan in a still. Place the subject toward the side the pan is leaving, with open space in the pan direction; no motion verbs."
+    video_behavior: "The camera stays in one spot and turns left or right; the view sweeps across the scene without parallax."
+    markers:
+      en: ["pans? (left|right)", "turns (left|right)", "rotat\\w* (left|right)", "pan to the (left|right)"]
+      zh: ["横摇"]
+    anti_markers:
+      en: ["slides", "trucks", "moves sideways"]
+
+  TILT:
+    command: /TILT
+    canonical_name: tilt
+    category: CAMERA_ROTATION
+    kind: movement
+    definition: "The camera stays in place and rotates vertically (pitch). The body does not rise or sink."
+    critical_rule: "TILT is not PEDESTAL, and not the 'tilt' in Dutch tilt."
+    params: [dir_ud, degrees, speed]
+    writes: {rot.pitch: "$dir"}
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, LOCAL-001]
+    confidence: HIGH
+    aliases: [/TILTUP, /TILTDOWN]
+    conflicts: [STATIC]
+    compatible_with: [DOLLYIN, CRANE, PEDESTAL, ORBIT]
+    image_behavior: "Cannot tilt in a still. Compose as a moment in the tilt: the frame favors the end the tilt travels toward; no motion verbs."
+    video_behavior: "The camera stays in one spot and pivots up or down."
+    markers:
+      en: ["tilts? (up|down)", "tilting (up|down)", "pivots? (up|down)"]
+      zh: ["纵摇"]
+    anti_markers:
+      en: ["rises straight", "pedestals?", "lowers straight"]
+
+  ROLL:
+    command: /ROLL
+    canonical_name: camera_roll
+    category: CAMERA_ROTATION
+    kind: movement
+    definition: "The camera rotates around its lens axis during the shot (a moving roll). A static cant is DUTCH."
+    params: [dir_rot, degrees, speed]
+    writes: {rot.roll: "$dir"}
+    sources: [SRC-001, SRC-002, SRC-005, LOCAL-001]
+    confidence: HIGH
+    aliases: [/BARRELROLL, /ROLLCW, /ROLLCCW]
+    conflicts: [STATIC]
+    compatible_with: [FPV, DOLLYIN, TOPDOWN]
+    image_behavior: "A still can only show the result: a strongly tilted horizon; state it as a position, not a motion."
+    video_behavior: "The image rotates around the center as the camera rolls clockwise or counterclockwise."
+    markers:
+      en: ["rolls? (clockwise|counterclockwise)", "rolling", "within a roll"]
+      zh: ["滚转", "旋转镜头"]
+
+  WHIPPAN:
+    command: /WHIPPAN
+    canonical_name: whip_pan
+    category: CAMERA_ROTATION
+    kind: movement
+    definition: "A very fast pan that smears the image between a starting view and a destination. /WHIPPAN:R:DOOR names where it lands."
+    params: [dir_lr, label]
+    writes: {rot.yaw: "$dir"}
+    specializes: PAN
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, SRC-009]
+    confidence: HIGH
+    aliases: [/WHIP, /SWISHPAN, /SWISH]
+    conflicts: [STATIC]
+    compatible_with: [HANDHELD, TRACK]
+    image_behavior: "A still can show the smear: strong horizontal motion blur across the frame with the destination starting to resolve."
+    video_behavior: "The camera whips sideways off the first view and lands on the destination; the move has a clear start and end point."
+    markers:
+      en: ["whip"]
+      zh: ["甩镜"]
+
+  # ---------------------------------------------------------- CAMERA_TRANSLATION
+  DOLLYIN:
+    command: /DOLLYIN
+    canonical_name: dolly_in
+    category: CAMERA_TRANSLATION
+    kind: movement
+    definition: "The camera body physically travels forward along the lens axis toward the subject. Near objects grow faster than far ones (parallax). The focal length does not change."
+    critical_rule: "Never translate DOLLYIN as a zoom."
+    params: [size_range, percent, distance, magnitude, speed]
+    writes: {move.z: IN}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-009, LOCAL-001, LOCAL-002]
+    confidence: HIGH
+    aliases: [/PUSHIN, /PUSH, /DOLLYFORWARD, /SUPERDOLLY, /DOLLY:IN, /DOLLY:FWD]
+    conflicts: [DOLLYOUT, STATIC, TRIPOD]
+    compatible_with: [TILT, DUTCH, LOWANGLE, RACKFOCUS, FOLLOW]
+    image_behavior: "Cannot travel in a still. Place the camera close to the subject as a moment in the approach; near objects are large at the frame edges."
+    video_behavior: "State START size, the forward PATH toward the subject, SPEED if given, the subject growing in frame, near-far PARALLAX, and the END size if given."
+    markers:
+      en: ["push(es|ing)?[- ]in", "moves? forward", "dolly in", "travels forward"]
+      zh: ["推镜"]
+    anti_markers:
+      en: ["zoom"]
+      zh: ["变焦"]
+
+  DOLLYOUT:
+    command: /DOLLYOUT
+    canonical_name: dolly_out
+    category: CAMERA_TRANSLATION
+    kind: movement
+    definition: "The camera body physically travels backward along the lens axis, away from the subject; more of the set comes into view at the edges. Focal length stays fixed."
+    critical_rule: "Never translate DOLLYOUT as a zoom out."
+    params: [size_range, percent, distance, magnitude, speed]
+    writes: {move.z: OUT}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-009, LOCAL-001]
+    confidence: HIGH
+    aliases: [/PULLOUT, /PULLBACK, /PULL, /DOLLYBACK, /DOLLY:OUT, /DOLLY:BACK]
+    conflicts: [DOLLYIN, STATIC, TRIPOD]
+    compatible_with: [PAN, CRANE, PEDESTAL, NEGSPACE]
+    image_behavior: "Cannot travel in a still. Place the camera farther back, the subject smaller, more surroundings revealed at the edges."
+    video_behavior: "State START size, the backward PATH, SPEED if given, the subject shrinking and more set appearing at the edges, and the END size if given."
+    markers:
+      en: ["pull(s|ing)?[- ](out|back)", "moves? backward", "dolly out", "travels backward"]
+      zh: ["拉镜", "后拉"]
+    anti_markers:
+      en: ["zoom"]
+      zh: ["变焦"]
+
+  TRUCK:
+    command: /TRUCK
+    canonical_name: truck
+    category: CAMERA_TRANSLATION
+    kind: movement
+    definition: "The camera body slides sideways (left or right), parallel to the scene. Near objects pass faster than far ones."
+    critical_rule: "TRUCK is not PAN: the camera travels, it does not turn."
+    params: [dir_lr, percent, distance, magnitude, speed]
+    writes: {move.x: "$dir"}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, LOCAL-001]
+    confidence: HIGH
+    aliases: [/DOLLY:L, /DOLLY:R, /TRUCKLEFT, /TRUCKRIGHT, /CRAB, /SLIDE, /LATERAL]
+    conflicts: [STATIC, TRIPOD]
+    compatible_with: [PAN, SLIDER, PROFILE, FGLAYER]
+    image_behavior: "Cannot travel in a still. Frame side-on with a foreground element partly passing the edge, implying sideways travel."
+    video_behavior: "The camera slides sideways; foreground passes faster than the background (lateral parallax)."
+    markers:
+      en: ["slides? (left|right|sideways)", "trucks? (left|right)", "moves? sideways", "sideways move"]
+      zh: ["横移"]
+    anti_markers:
+      en: ["pans? (left|right)", "turns (left|right)"]
+
+  PEDESTAL:
+    command: /PEDESTAL
+    canonical_name: pedestal
+    category: CAMERA_TRANSLATION
+    kind: movement
+    definition: "The camera body rises or lowers straight up or down, keeping its angle."
+    critical_rule: "PEDESTAL is not TILT: the lens angle stays the same."
+    params: [dir_ud, distance, magnitude, speed]
+    writes: {move.y: "$dir"}
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, SRC-009, LOCAL-001]
+    confidence: HIGH
+    aliases: [/PEDESTALUP, /PEDESTALDOWN, /PEDUP, /PEDDOWN]
+    conflicts: [STATIC, TRIPOD]
+    compatible_with: [TILT, DOLLYOUT, TRACK]
+    image_behavior: "Cannot rise in a still. Choose the height the move reaches; no motion verbs."
+    video_behavior: "The whole camera rises or lowers straight up or down while staying level."
+    markers:
+      en: ["(rises|lowers|sinks) straight", "pedestals? (up|down)", "pedestalling (up|down)", "the (rise|descent) reaches"]
+      zh: ["升降"]
+    anti_markers:
+      en: ["tilts? (up|down)"]
+
+  # ----------------------------------------------------------- CAMERA_TRACKING
+  TRACK:
+    command: /TRACK
+    canonical_name: tracking_shot
+    category: CAMERA_TRACKING
+    kind: movement
+    definition: "The camera moves with a moving subject, keeping it framed. Generic: the side (behind, front, beside) is not specified."
+    params: [subject, screen, speed]
+    writes: {track.mode: TRACK}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, LOCAL-001, LOCAL-002]
+    confidence: HIGH
+    aliases: [/TRACKING, /TRACKINGSHOT, /FOLLOWSHOT]
+    conflicts: [STATIC, TRIPOD]
+    compatible_with: [HANDHELD, STEADICAM, GIMBAL, SCREEN]
+    image_behavior: "Cannot track in a still. Frame the moving subject mid-stride with the background slightly streaked in the travel direction only if the speed is FAST."
+    video_behavior: "The camera travels with the subject, keeping it in frame the whole way, and comes to rest with it if it stops."
+    markers:
+      en: ["tracking shot", "follows? .* keeping", "travels with", "tracking position"]
+      zh: ["跟拍"]
+
+  FOLLOW:
+    command: /FOLLOW
+    canonical_name: follow_shot
+    category: CAMERA_TRACKING
+    kind: movement
+    definition: "The camera follows BEHIND the moving subject."
+    params: [subject, speed]
+    writes: {track.mode: FOLLOW}
+    defaults: {subject.orientation: REAR}
+    specializes: TRACK
+    sources: [SRC-001, SRC-002, SRC-004, LOCAL-002]
+    confidence: HIGH
+    aliases: [/FOLLOWING, /FOLLOWBEHIND, /HANDHELDFOLLOW]
+    conflicts: [LEAD, TRACKSIDE, FRONTAL, STATIC]
+    compatible_with: [HANDHELD, SHOULDERLEVEL, REAR, STEADICAM]
+    image_behavior: "Seen from behind the moving subject, the path ahead of them visible."
+    video_behavior: "The camera stays behind the subject and moves with them; the subject walks away from camera."
+    markers:
+      en: ["follows? behind", "behind .* as .* (walks|runs|moves)", "following position behind"]
+      zh: ["背后跟拍"]
+
+  LEAD:
+    command: /LEAD
+    canonical_name: leading_shot
+    category: CAMERA_TRACKING
+    kind: movement
+    definition: "The camera moves backward in FRONT of the subject as the subject advances toward it."
+    params: [subject, speed]
+    writes: {track.mode: LEAD}
+    defaults: {subject.orientation: FRONTAL}
+    specializes: TRACK
+    sources: [SRC-001, SRC-004]
+    confidence: MEDIUM
+    aliases: [/LEADING, /LEADINGSHOT, /BACKTRACK]
+    conflicts: [FOLLOW, TRACKSIDE, REAR, STATIC]
+    compatible_with: [STEADICAM, GIMBAL, MS, FRONTAL]
+    image_behavior: "Seen from in front of the advancing subject, the subject walking toward the camera."
+    video_behavior: "The camera moves backward ahead of the subject, keeping the face in frame as they walk toward it."
+    markers:
+      en: ["moves? backward ahead", "ahead of .* walk(s|ing)? toward", "leading position"]
+      zh: ["前方倒退跟拍"]
+
+  TRACKSIDE:
+    command: /TRACKSIDE
+    canonical_name: side_tracking
+    category: CAMERA_TRACKING
+    kind: movement
+    definition: "The camera travels parallel beside the moving subject. /TRACKSIDE:R = the camera travels toward camera-right with a subject moving that way (screen L2R)."
+    params: [dir_lr, subject, speed]
+    writes: {track.mode: SIDE, move.x: "$dir"}
+    defaults: {subject.orientation: PROFILE}
+    specializes: TRACK
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: HIGH
+    aliases: [/SIDETRACK, /SIDETRACKING, /PARALLEL]
+    conflicts: [FOLLOW, LEAD, FRONTAL, STATIC]
+    compatible_with: [FS, GROUNDLEVEL, GIMBAL, PROFILE, SCREEN]
+    image_behavior: "Seen side-on beside the moving subject, mid-stride; the background may streak only if the speed is FAST."
+    video_behavior: "The camera travels beside the subject at the same pace; the subject stays about the same size while the background slides past behind them."
+    markers:
+      en: ["beside", "alongside", "side-on"]
+      zh: ["侧面跟拍"]
+
+  ORBIT:
+    command: /ORBIT
+    canonical_name: orbit
+    category: CAMERA_TRACKING
+    kind: movement
+    definition: "The camera travels on a circular path around the subject, keeping it framed. The subject does NOT turn; the background sweeps behind it. /ORBIT:R:90 = 90 degrees toward camera-right (counterclockwise from above)."
+    critical_rule: "ORBIT is not subject rotation: the subject stays in place and the camera moves."
+    params: [dir_orbit, degrees, magnitude, speed]
+    writes: {orbit.dir: "$dir"}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-009, LOCAL-001]
+    confidence: HIGH
+    aliases: [/ARC, /ARCSHOT, /CIRCLE, /ORBIT360]
+    conflicts: [STATIC, TRIPOD, SLIDER]
+    compatible_with: [CRANE, DOLLYIN, TILT, RACKFOCUS, LOWANGLE]
+    image_behavior: "Position the camera at the orbit's reached angle around the subject (e.g. about 45 degrees toward camera-right); the subject stays centered."
+    video_behavior: "The camera circles the subject by the stated angle; the subject stays in place and centered while the background sweeps behind it."
+    markers:
+      en: ["circles?", "orbit", "arc(s)? (around|shot)"]
+      zh: ["环绕"]
+    anti_markers:
+      en: ["(turns|spins|rotates) (around|in place)", "turntable"]
+
+  # ---------------------------------------------------------- COMPLEX_MOVEMENT
+  CRANE:
+    command: /CRANE
+    canonical_name: crane
+    category: COMPLEX_MOVEMENT
+    kind: movement
+    definition: "A large vertical move on an arm (crane, jib, boom), usually reframing on the way (tilting to keep the subject). Larger and more arcing than a pedestal."
+    params: [dir_ud, magnitude, speed]
+    writes: {move.y: "$dir"}
+    defaults: {rig.type: CRANE}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-007, SRC-009]
+    confidence: HIGH
+    aliases: [/JIB, /BOOM, /CRANEUP, /CRANEDOWN, /JIBUP, /JIBDOWN, /BOOMUP, /BOOMDOWN]
+    conflicts: [STATIC, TRIPOD, SLIDER, HANDHELD]
+    compatible_with: [TILT, ORBIT, PAN, DOLLYOUT, HIGHANGLE]
+    image_behavior: "Cannot rise in a still. Place the camera at the height the crane reaches, looking toward the subject."
+    video_behavior: "The camera rises (or descends) in a long arc on an arm, tilting to keep the subject framed; the view opens out (or closes in) as it goes."
+    markers:
+      en: ["crane", "rises high", "descends from high", "long (rise|descent)", "pedestals? (up high|down in one long)"]
+      zh: ["摇臂"]
+
+  FLYTHROUGH:
+    command: /FLYTHROUGH
+    canonical_name: fly_through
+    category: COMPLEX_MOVEMENT
+    kind: movement
+    definition: "The camera moves forward through an opening (window, doorway, gap) into a new space. /FLYTHROUGH:WINDOW names the opening."
+    params: [label, speed]
+    writes: {move.z: IN}
+    sources: [SRC-001, SRC-002, SRC-007]
+    confidence: HIGH
+    aliases: [/FLYTHRU, /PASSTHROUGH, /THROUGH]
+    conflicts: [STATIC, TRIPOD, DOLLYOUT]
+    compatible_with: [FPV, DRONE, GIMBAL]
+    image_behavior: "Frame through the opening, its edges in the near foreground, the space beyond in view."
+    video_behavior: "The camera moves forward and passes through the named opening into the space beyond."
+    markers:
+      en: ["through the", "passes through"]
+      zh: ["穿过", "穿越"]
+
+  DOLLYZOOM:
+    command: /DOLLYZOOM
+    canonical_name: dolly_zoom
+    category: COMPLEX_MOVEMENT
+    kind: movement
+    definition: "Dolly and zoom in opposite directions at matching rates so the subject keeps its size while the background changes scale. IN = camera moves forward while zooming out (background recedes); OUT = camera moves back while zooming in (background looms)."
+    params: [dir_io, speed]
+    writes: {}
+    dir_writes:
+      IN: {move.z: IN, zoom.dir: OUT}
+      OUT: {move.z: OUT, zoom.dir: IN}
+    default_dir: IN
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, SRC-009]
+    confidence: HIGH
+    aliases: [/VERTIGO, /ZOLLY, /CONTRAZOOM]
+    conflicts: [STATIC, TRIPOD]
+    compatible_with: [CU, MCU, CENTER]
+    image_behavior: "Cannot show the effect in a still. Render the end state: subject at the same size, the background unusually stretched (IN) or compressed (OUT)."
+    video_behavior: "The subject stays the same size and position in frame for the whole shot while the background recedes (IN) or looms closer (OUT)."
+    markers:
+      en: ["same size", "dolly zoom"]
+      zh: ["滑动变焦"]
+
+  # -------------------------------------------------------------------- AERIAL
+  DRONEVIEW:
+    command: /DRONEVIEW
+    canonical_name: drone_view
+    category: AERIAL
+    kind: state
+    definition: "An aerial viewpoint from drone altitude looking down at an oblique angle (not straight down). A POSITION, not a movement."
+    critical_rule: "DRONEVIEW is not BIRDSEYE and not TOPDOWN."
+    params: []
+    writes: {camera.height: AERIAL}
+    defaults: {camera.pitch: HIGH, rig.type: DRONE}
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: MEDIUM
+    aliases: [/DRONESHOT]
+    conflicts: [GROUNDLEVEL, EYELEVEL, HANDHELD, TRIPOD]
+    compatible_with: [FLYOVER, EWS, TOPDOWN, STATIC]
+    image_behavior: "Seen from drone height, looking down at an angle over the scene."
+    video_behavior: "Seen from drone height, looking down at an angle over the scene."
+    markers:
+      en: ["drone height", "from a drone", "drone view", "aerial view: the camera is high in the air"]
+      zh: ["无人机视角"]
+    anti_markers:
+      en: ["straight down", "bird's-eye", "top-down"]
+
+  FLYOVER:
+    command: /FLYOVER
+    canonical_name: fly_over
+    category: AERIAL
+    kind: movement
+    definition: "The airborne camera travels forward over the landscape or subject."
+    params: [speed]
+    writes: {move.z: IN, camera.height: AERIAL}
+    defaults: {rig.type: DRONE}
+    sources: [SRC-001, SRC-002]
+    confidence: MEDIUM
+    aliases: [/OVERFLIGHT]
+    conflicts: [GROUNDLEVEL, STATIC, TRIPOD, HANDHELD, DOLLYOUT]
+    compatible_with: [DRONEVIEW, EWS, HIGHANGLE, TOPDOWN]
+    image_behavior: "Seen from the air above the landscape, as a moment in forward flight; no motion verbs."
+    video_behavior: "The camera flies forward high over the landscape; the ground passes underneath."
+    markers:
+      en: ["flies (forward )?(high )?over", "over the landscape", "fly-?over"]
+      zh: ["飞越"]
+
+  DRONEREVEAL:
+    command: /DRONEREVEAL
+    canonical_name: drone_reveal
+    category: AERIAL
+    kind: movement
+    definition: "An aerial move (rising and/or pulling back) that reveals a large environment around a small subject. /DRONEREVEAL:UP or :BACK."
+    params: [dir_reveal, speed]
+    writes: {camera.height: AERIAL}
+    dir_writes:
+      UP: {move.y: UP}
+      BACK: {move.z: OUT}
+    default_dir: UP
+    defaults: {rig.type: DRONE}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-009]
+    confidence: MEDIUM
+    aliases: [/AERIALREVEAL, /AERIALPULLBACK]
+    conflicts: [GROUNDLEVEL, STATIC, TRIPOD, HANDHELD]
+    compatible_with: [EWS, DOLLYOUT, PEDESTAL]
+    image_behavior: "Render the revealed end state: the subject small far below inside the wide place."
+    video_behavior: "The camera rises and/or retreats until the subject is small far below and the whole place opens out."
+    markers:
+      en: ["reveal", "opens out"]
+      zh: ["揭示", "展开"]
+
+  # ----------------------------------------------------------------- CAMERA_RIG
+  STATIC:
+    command: /STATIC
+    canonical_name: static
+    category: CAMERA_RIG
+    kind: rig
+    definition: "The camera does not move at all: no travel, no rotation, no zoom. (A focus change with a locked frame is CONTEXT_DEPENDENT, see conflict_matrix.)"
+    params: []
+    writes: {rig.stability: LOCKED, motion.none: "TRUE"}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-005B, LOCAL-001, LOCAL-002]
+    confidence: HIGH
+    aliases: [/LOCKED, /LOCKEDOFF, /STILL, /FIXED]
+    conflicts: [PAN, TILT, DOLLYIN, TRUCK, ORBIT, HANDHELD, ZOOMIN]
+    compatible_with: [TRIPOD, EYELEVEL, CENTER, RACKFOCUS]
+    image_behavior: "Nothing to convert: a still is static by nature; do not add motion blur."
+    video_behavior: "Say the stillness as a positive fact: the camera stays locked in one position for the whole shot."
+    markers:
+      en: ["static shot", "does not move", "locked"]
+      zh: ["固定镜头"]
+    anti_markers:
+      en: ["pans (left|right)", "push(es)? in", "tilts (up|down)", "zooms", "circles", "slides (left|right)"]
+
+  TRIPOD:
+    command: /TRIPOD
+    canonical_name: tripod
+    category: CAMERA_RIG
+    kind: rig
+    definition: "The camera is on a tripod at a fixed position: no travel. It may pan/tilt on the head if a rotation command is given; otherwise it is locked."
+    params: []
+    writes: {rig.type: TRIPOD, rig.stability: LOCKED}
+    sources: [SRC-004, SRC-002]
+    confidence: MEDIUM
+    aliases: [/STICKS]
+    conflicts: [HANDHELD, DOLLYIN, TRUCK, ORBIT, DRONE, FOLLOW]
+    compatible_with: [PAN, TILT, ZOOMIN, STATIC, RACKFOCUS]
+    image_behavior: "A steady, level frame with no shake."
+    video_behavior: "The camera stays at one fixed spot; only a stated pan or tilt may turn it."
+    markers:
+      en: ["tripod", "one fixed spot"]
+      zh: ["三脚架"]
+
+  HANDHELD:
+    command: /HANDHELD
+    canonical_name: handheld
+    category: CAMERA_RIG
+    kind: rig
+    definition: "The camera is hand-held: continuous small organic shake and drift. /HANDHELD:SUBTLE or :STRONG."
+    params: [intensity]
+    writes: {rig.type: HANDHELD, rig.stability: HANDHELD}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-009, LOCAL-001]
+    confidence: HIGH
+    aliases: [/SHAKYCAM, /SHAKY, /HANDHELDFOLLOW]
+    conflicts: [STATIC, TRIPOD, STEADICAM, GIMBAL, DRONE, SLIDER]
+    compatible_with: [FOLLOW, TRACK, SHOULDER, WHIPPAN, POV]
+    image_behavior: "A slightly off-level, imperfect framing; blur only if the speed is FAST."
+    video_behavior: "Small natural shake and drift for the whole shot (strong shake only when STRONG)."
+    markers:
+      en: ["handheld", "shak(es|ing)"]
+      zh: ["手持"]
+
+  SHOULDER:
+    command: /SHOULDER
+    canonical_name: shoulder_mount
+    category: CAMERA_RIG
+    kind: rig
+    definition: "Shoulder-mounted camera: a heavier, steadier handheld with a slight rolling sway."
+    params: []
+    writes: {rig.type: SHOULDER, rig.stability: HANDHELD}
+    specializes: HANDHELD
+    sources: [SRC-001]
+    confidence: LOW
+    aliases: [/SHOULDERMOUNT, /SHOULDERRIG]
+    conflicts: [STATIC, TRIPOD, STEADICAM, GIMBAL, DRONE]
+    compatible_with: [HANDHELD, FOLLOW, SHOULDERLEVEL]
+    image_behavior: "Framing at an operator's shoulder height, slightly imperfect."
+    video_behavior: "A slight rolling sway as if carried on an operator's shoulder."
+    markers:
+      en: ["shoulder-mounted", "on an operator's shoulder", "carried on a shoulder"]
+      zh: ["肩扛"]
+
+  STEADICAM:
+    command: /STEADICAM
+    canonical_name: steadicam
+    category: CAMERA_RIG
+    kind: rig
+    definition: "Body-worn stabilizer: smooth, floating movement that can walk with the actors."
+    params: []
+    writes: {rig.type: STEADICAM, rig.stability: STABILIZED}
+    sources: [SRC-001, SRC-004]
+    confidence: MEDIUM
+    aliases: [/STEADI, /FLOATING]
+    conflicts: [STATIC, TRIPOD, HANDHELD, GIMBAL, DRONE]
+    compatible_with: [FOLLOW, LEAD, TRACK, ORBIT]
+    image_behavior: "A smooth, level frame."
+    video_behavior: "Smooth, floating movement with no shake."
+    markers:
+      en: ["steadicam", "smooth(ly)? floating", "floats smoothly", "floating feel"]
+      zh: ["斯坦尼康"]
+
+  GIMBAL:
+    command: /GIMBAL
+    canonical_name: gimbal
+    category: CAMERA_RIG
+    kind: rig
+    definition: "Electronic stabilizer: very smooth, level movement."
+    params: []
+    writes: {rig.type: GIMBAL, rig.stability: STABILIZED}
+    sources: [SRC-001, SRC-004]
+    confidence: MEDIUM
+    aliases: [/STABILIZER, /STABILISED, /STABILIZED]
+    conflicts: [STATIC, TRIPOD, HANDHELD, STEADICAM]
+    compatible_with: [TRACKSIDE, FOLLOW, LEAD, ORBIT]
+    image_behavior: "A smooth, level frame."
+    video_behavior: "Very smooth, level movement with no shake."
+    markers:
+      en: ["gimbal", "stabili[sz]ed", "very smooth(ly)?,? (and )?level"]
+      zh: ["稳定器"]
+
+  SLIDER:
+    command: /SLIDER
+    canonical_name: slider
+    category: CAMERA_RIG
+    kind: rig
+    definition: "Short rail: small, smooth, straight-line moves (usually sideways or forward), strong foreground parallax."
+    params: []
+    writes: {rig.type: SLIDER, rig.stability: STABILIZED}
+    sources: [SRC-001, SRC-004]
+    confidence: MEDIUM
+    aliases: [/RAIL]
+    conflicts: [HANDHELD, CRANE, DRONE, ORBIT]
+    compatible_with: [TRUCK, DOLLYIN, FGLAYER]
+    image_behavior: "A smooth, level frame, usually with a foreground element."
+    video_behavior: "A short, smooth, straight-line move on a rail."
+    markers:
+      en: ["slider", "rail", "straight line"]
+      zh: ["滑轨"]
+
+  DRONE:
+    command: /DRONE
+    canonical_name: drone
+    category: CAMERA_RIG
+    kind: rig
+    definition: "The camera is carried by a drone: smooth airborne platform."
+    params: []
+    writes: {rig.type: DRONE, rig.stability: AERIAL}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/UAV]
+    conflicts: [HANDHELD, TRIPOD, SLIDER, STEADICAM, SHOULDER]
+    compatible_with: [AERIAL, FLYOVER, DRONEREVEAL, TOPDOWN, BIRDSEYE]
+    image_behavior: "Seen from a drone's position in the air."
+    video_behavior: "Smooth airborne movement."
+    markers:
+      en: ["drone", "through the air", "hovers"]
+      zh: ["无人机"]
+
+  FPV:
+    command: /FPV
+    canonical_name: fpv_drone
+    category: CAMERA_RIG
+    kind: rig
+    definition: "An FPV (first-person-view) racing drone: fast, agile, can dive, weave and roll. A rig, not a character's point of view."
+    critical_rule: "FPV is not POV."
+    params: []
+    writes: {rig.type: FPV, rig.stability: AERIAL}
+    specializes: DRONE
+    sources: [SRC-001, SRC-002, SRC-007]
+    confidence: HIGH
+    aliases: [/FPVDRONE, /RACINGDRONE]
+    conflicts: [HANDHELD, TRIPOD, STATIC, SLIDER]
+    compatible_with: [FLYTHROUGH, ROLL, CRASHZOOM, POV]
+    image_behavior: "An agile low-flying drone's view, as a moment in fast flight."
+    video_behavior: "Fast, agile flight that can dive, weave and bank."
+    markers:
+      en: ["fpv", "agile"]
+      zh: ["穿越机"]
+
+  # ----------------------------------------------------------------------- LENS
+  LENS:
+    command: /LENS
+    canonical_name: focal_length
+    category: LENS
+    kind: lens
+    definition: "A specific focal length in mm (35mm full-frame equivalent). /LENS:35, /LENS50. Sets the lens class it falls in."
+    params: [mm]
+    writes: {lens.focal_mm: "$mm"}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-006]
+    confidence: HIGH
+    aliases: [/FOCAL, /MM]
+    conflicts: []
+    compatible_with: [MS, CU, SHALLOW, DEEPFOCUS]
+    image_behavior: "State the focal length and its visible perspective (compressed or expanded depth)."
+    video_behavior: "State the focal length; it does not change during the shot unless a zoom is stated."
+    markers:
+      en: ["\\d+ ?mm"]
+      zh: ["\\d+ ?mm"]
+
+  ULTRAWIDE:
+    command: /ULTRAWIDE
+    canonical_name: ultra_wide_lens
+    category: LENS
+    kind: lens
+    definition: "Ultra-wide lens (about 18mm or wider): strongly expanded depth, stretched edges."
+    params: []
+    writes: {lens.focal_class: ULTRAWIDE}
+    sources: [SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/ULTRAWIDELENS, /UWA]
+    conflicts: [TELEPHOTO, PORTRAITLENS, NORMAL, WIDEANGLE]
+    compatible_with: [GROUNDLEVEL, LOWANGLE, FISHEYE, DEEPFOCUS]
+    image_behavior: "Ultra-wide perspective: near things huge, far things tiny, edges stretched."
+    video_behavior: "Ultra-wide perspective; any travel toward the camera looks fast."
+    markers:
+      en: ["ultra-wide"]
+      zh: ["超广角"]
+
+  WIDEANGLE:
+    command: /WIDEANGLE
+    canonical_name: wide_angle_lens
+    category: LENS
+    kind: lens
+    definition: "Wide-angle LENS (about 20-28mm): expanded depth, more of the space in view at a given distance. A lens, never a shot size."
+    critical_rule: "WIDEANGLE never becomes a wide shot (/WS)."
+    params: []
+    writes: {lens.focal_class: WIDE}
+    sources: [SRC-001, SRC-003, SRC-004, SRC-006]
+    confidence: HIGH
+    aliases: [/WIDELENS, /WIDEANGLELENS]
+    conflicts: [TELEPHOTO, PORTRAITLENS, NORMAL, ULTRAWIDE]
+    compatible_with: [WS, CU, LOWANGLE, HANDHELD]
+    image_behavior: "Wide-angle lens perspective: depth feels expanded; the shot size stays whatever was specified."
+    video_behavior: "Wide-angle lens perspective; the shot size stays whatever was specified."
+    markers:
+      en: ["wide-angle"]
+      zh: ["广角"]
+    anti_markers:
+      en: ["(?<!extreme )wide shot"]
+
+  NORMAL:
+    command: /NORMAL
+    canonical_name: normal_lens
+    category: LENS
+    kind: lens
+    definition: "Normal lens (about 40-55mm): perspective close to human vision."
+    params: []
+    writes: {lens.focal_class: NORMAL}
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/NORMALLENS, /STANDARDLENS]
+    conflicts: [TELEPHOTO, WIDEANGLE, ULTRAWIDE, PORTRAITLENS]
+    compatible_with: [MS, MCU, EYELEVEL]
+    image_behavior: "Natural, human-like perspective."
+    video_behavior: "Natural, human-like perspective."
+    markers:
+      en: ["normal lens", "natural perspective"]
+      zh: ["标准镜头"]
+
+  PORTRAITLENS:
+    command: /PORTRAITLENS
+    canonical_name: portrait_lens
+    category: LENS
+    kind: lens
+    definition: "Short telephoto portrait lens (about 85-105mm): flattering face, softly compressed background."
+    params: []
+    writes: {lens.focal_class: PORTRAIT}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-006]
+    confidence: HIGH
+    aliases: [/PORTRAIT]
+    conflicts: [WIDEANGLE, ULTRAWIDE, TELEPHOTO, NORMAL, FISHEYE]
+    compatible_with: [CU, MCU, SHALLOW]
+    image_behavior: "Portrait-lens perspective: face rendered naturally, background compressed."
+    video_behavior: "Portrait-lens perspective: face rendered naturally, background compressed."
+    markers:
+      en: ["portrait lens", "85 ?mm"]
+      zh: ["人像镜头", "85 ?mm"]
+
+  TELEPHOTO:
+    command: /TELEPHOTO
+    canonical_name: telephoto_lens
+    category: LENS
+    kind: lens
+    definition: "Long lens (about 135mm and longer): strongly compressed depth; background planes stack close behind the subject."
+    params: []
+    writes: {lens.focal_class: TELE}
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/TELE, /LONGLENS]
+    conflicts: [WIDEANGLE, ULTRAWIDE, FISHEYE, NORMAL, PORTRAITLENS]
+    compatible_with: [CU, WS, SHALLOW, FOLLOW]
+    image_behavior: "Telephoto compression: the background looks close and large behind the subject."
+    video_behavior: "Telephoto compression; any camera shake is magnified."
+    markers:
+      en: ["telephoto", "long lens"]
+      zh: ["长焦"]
+
+  MACRO:
+    command: /MACRO
+    canonical_name: macro_lens
+    category: LENS
+    kind: lens
+    definition: "Macro lens: focuses extremely close for large magnification of small details. A lens; the macro 'shot size' is /ECU /MACRO."
+    params: []
+    writes: {lens.type_macro: "TRUE"}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/MACROLENS]
+    conflicts: [EWS, WS, FISHEYE]
+    compatible_with: [ECU, INSERT, SHALLOW, SLIDER]
+    image_behavior: "Macro magnification of a small detail; the focus plane is razor thin."
+    video_behavior: "Macro magnification of a small detail."
+    markers:
+      en: ["macro"]
+      zh: ["微距"]
+
+  FISHEYE:
+    command: /FISHEYE
+    canonical_name: fisheye_lens
+    category: LENS
+    kind: lens
+    definition: "Fisheye lens: extreme wide field with strong barrel distortion (curved straight lines)."
+    params: []
+    writes: {lens.focal_class: ULTRAWIDE, lens.type_fisheye: "TRUE"}
+    specializes: ULTRAWIDE
+    sources: [SRC-001, SRC-002]
+    confidence: HIGH
+    aliases: [/FISHEYELENS]
+    conflicts: [TELEPHOTO, PORTRAITLENS, NORMAL, MACRO]
+    compatible_with: [LOWANGLE, HANDHELD, FPV]
+    image_behavior: "Fisheye distortion: straight lines bow outward, the frame looks rounded."
+    video_behavior: "Fisheye distortion for the whole shot."
+    markers:
+      en: ["fisheye"]
+      zh: ["鱼眼"]
+
+  ANAMORPHIC:
+    command: /ANAMORPHIC
+    canonical_name: anamorphic_lens
+    category: LENS
+    kind: lens
+    definition: "Anamorphic lens character: oval out-of-focus highlights and horizontal lens flares. Does not mean black bars (aspect ratio is out of scope)."
+    params: []
+    writes: {lens.type_anamorphic: "TRUE"}
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: HIGH
+    aliases: [/ANAMORPHICLENS]
+    conflicts: []
+    compatible_with: [SHALLOW, TELEPHOTO, WS]
+    image_behavior: "Oval out-of-focus highlights and horizontal flares; no painted black bars."
+    video_behavior: "Oval out-of-focus highlights and horizontal flares; no painted black bars."
+    markers:
+      en: ["anamorphic"]
+      zh: ["变形宽银幕"]
+
+  # ----------------------------------------------------------------------- ZOOM
+  ZOOMIN:
+    command: /ZOOMIN
+    canonical_name: zoom_in
+    category: ZOOM
+    kind: movement
+    definition: "The focal length increases while the camera body stays put: everything magnifies equally, no parallax."
+    critical_rule: "ZOOMIN is not DOLLYIN: the camera does not move."
+    params: [size_range, percent, magnitude, speed]
+    writes: {zoom.dir: IN}
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, SRC-009, LOCAL-001]
+    confidence: HIGH
+    aliases: [/ZOOM:IN, /LENSZOOMIN, /ZOOMINLENS]
+    conflicts: [ZOOMOUT, STATIC]
+    compatible_with: [PAN, TRIPOD, HANDHELD]
+    image_behavior: "Cannot zoom in a still. Render the zoomed framing with flat, compressed perspective."
+    video_behavior: "The camera stays put while the lens zooms in; everything magnifies by the same amount."
+    markers:
+      en: ["zooms? in", "lens zooms", "longer focal length"]
+      zh: ["变焦推近", "更长焦距"]
+    anti_markers:
+      en: ["push(es)? in", "moves forward", "dolly"]
+      zh: ["推镜"]
+
+  ZOOMOUT:
+    command: /ZOOMOUT
+    canonical_name: zoom_out
+    category: ZOOM
+    kind: movement
+    definition: "The focal length decreases while the camera body stays put: the view widens with no parallax."
+    critical_rule: "ZOOMOUT is not DOLLYOUT: the camera does not move."
+    params: [size_range, percent, magnitude, speed]
+    writes: {zoom.dir: OUT}
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, SRC-009, LOCAL-001]
+    confidence: HIGH
+    aliases: [/ZOOM:OUT, /LENSZOOMOUT, /ZOOMOUTLENS]
+    conflicts: [ZOOMIN, STATIC]
+    compatible_with: [TRIPOD, TILT]
+    image_behavior: "Cannot zoom in a still. Render the wider framing with the same camera position."
+    video_behavior: "The camera stays put while the lens zooms out; the view widens evenly."
+    markers:
+      en: ["zooms? out", "lens zooms", "wider from the same camera position"]
+      zh: ["变焦拉远", "更广的视野"]
+    anti_markers:
+      en: ["pull(s)? (out|back)", "moves backward", "dolly"]
+      zh: ["拉镜"]
+
+  CRASHZOOM:
+    command: /CRASHZOOM
+    canonical_name: crash_zoom
+    category: ZOOM
+    kind: movement
+    definition: "A sudden, very fast zoom (default IN) that snaps between framings with flat magnification."
+    params: [dir_io]
+    writes: {}
+    dir_writes:
+      IN: {zoom.dir: IN}
+      OUT: {zoom.dir: OUT}
+    default_dir: IN
+    sources: [SRC-001, SRC-002, SRC-009]
+    confidence: HIGH
+    aliases: [/SNAPZOOM, /CRASH]
+    conflicts: [STATIC, DOLLYZOOM]
+    compatible_with: [FPV, HANDHELD, CU]
+    image_behavior: "Render the landing framing with a slight radial zoom streak only if the user wants the snap visible."
+    video_behavior: "One sudden, violent zoom from the opening framing to the landing framing; the world itself does not move."
+    markers:
+      en: ["crash zoom", "sudden(ly)? zoom"]
+      zh: ["急速变焦"]
+    anti_markers:
+      en: ["push(es)? in", "dolly"]
+
+  # ---------------------------------------------------------------------- FOCUS
+  SHALLOW:
+    command: /SHALLOW
+    canonical_name: shallow_depth_of_field
+    category: FOCUS
+    kind: focus
+    definition: "A thin plane of focus: the subject is sharp, the foreground and background fall soft."
+    params: []
+    writes: {focus.dof: SHALLOW}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-006]
+    confidence: HIGH
+    aliases: [/SHALLOWDOF, /SHALLOWFOCUS, /BOKEH]
+    conflicts: [DEEPFOCUS]
+    compatible_with: [CU, PORTRAITLENS, TELEPHOTO, RACKFOCUS]
+    image_behavior: "Describe what is sharp and what dissolves (not just 'bokeh')."
+    video_behavior: "Subject stays sharp while the background stays soft."
+    markers:
+      en: ["shallow", "soft (background|behind)|background (is |stays )?soft"]
+      zh: ["浅景深"]
+
+  DEEPFOCUS:
+    command: /DEEPFOCUS
+    canonical_name: deep_focus
+    category: FOCUS
+    kind: focus
+    definition: "Everything from foreground to background is sharp."
+    params: []
+    writes: {focus.dof: DEEP}
+    sources: [SRC-001, SRC-003, SRC-004, SRC-005]
+    confidence: HIGH
+    aliases: [/DEEP, /DEEPDOF, /ALLSHARP]
+    conflicts: [SHALLOW]
+    compatible_with: [WS, DEEPSTAGING, WIDEANGLE]
+    image_behavior: "Foreground, midground and background all sharp."
+    video_behavior: "Foreground, midground and background all stay sharp."
+    markers:
+      en: ["deep focus", "(all|everything) .*sharp"]
+      zh: ["深焦", "大景深"]
+
+  RACKFOCUS:
+    command: /RACKFOCUS
+    canonical_name: rack_focus
+    category: FOCUS
+    kind: focus
+    definition: "The plane of focus shifts from one subject/plane to another during the shot; framing is unchanged. /RACKFOCUS:A>B or :FG>BG."
+    critical_rule: "RACKFOCUS moves focus, not the camera. It is never a dolly or zoom."
+    params: [relation, speed]
+    writes: {focus.pull: RACK}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-007, SRC-009]
+    confidence: HIGH
+    aliases: [/PULLFOCUS, /FOCUSPULL, /RACK]
+    conflicts: [SPLITDIOPTER]
+    compatible_with: [STATIC, ORBIT, DOLLYIN, SHALLOW]
+    image_behavior: "A still shows one focus state: render the START plane sharp and the target soft, or the END state if the user asks for it."
+    video_behavior: "Focus starts on the first target, then shifts to the second; the framing does not change."
+    markers:
+      en: ["focus (shifts|racks|moves)", "rack"]
+      zh: ["移焦", "焦点转移"]
+    anti_markers:
+      en: ["push(es)? in", "dolly", "zooms"]
+
+  FGFOCUS:
+    command: /FGFOCUS
+    canonical_name: foreground_focus
+    category: FOCUS
+    kind: focus
+    definition: "The plane of focus sits on the foreground."
+    params: [subject]
+    writes: {focus.target: FG}
+    sources: [SRC-004, SRC-005, SRC-006, SRC-007]
+    confidence: MEDIUM
+    aliases: [/FOCUSFG, /FOREFOCUS]
+    conflicts: [BGFOCUS, MGFOCUS]
+    compatible_with: [SHALLOW, FGLAYER, INSERT]
+    image_behavior: "Foreground sharp; farther planes soft."
+    video_behavior: "Focus stays on the foreground."
+    markers:
+      en: ["foreground (is |stays )?sharp|focus (is |stays )?on the foreground"]
+      zh: ["焦点在前景"]
+
+  MGFOCUS:
+    command: /MGFOCUS
+    canonical_name: midground_focus
+    category: FOCUS
+    kind: focus
+    definition: "The plane of focus sits on the midground."
+    params: [subject]
+    writes: {focus.target: MG}
+    sources: [SRC-004, SRC-005, SRC-006]
+    confidence: MEDIUM
+    aliases: [/FOCUSMG]
+    conflicts: [FGFOCUS, BGFOCUS]
+    compatible_with: [SHALLOW, DEEPSTAGING]
+    image_behavior: "Midground sharp; near and far planes soft."
+    video_behavior: "Focus stays on the midground."
+    markers:
+      en: ["midground (is |stays )?sharp|focus (is |stays )?on the midground"]
+      zh: ["焦点在中景"]
+
+  BGFOCUS:
+    command: /BGFOCUS
+    canonical_name: background_focus
+    category: FOCUS
+    kind: focus
+    definition: "The plane of focus sits on the background; nearer planes are soft."
+    params: [subject]
+    writes: {focus.target: BG}
+    sources: [SRC-004, SRC-005, SRC-006]
+    confidence: MEDIUM
+    aliases: [/FOCUSBG]
+    conflicts: [FGFOCUS, MGFOCUS]
+    compatible_with: [FGLAYER, SHALLOW]
+    image_behavior: "Background sharp; foreground soft."
+    video_behavior: "Focus stays on the background."
+    markers:
+      en: ["background (is |stays )?sharp|focus (is |stays )?on the background"]
+      zh: ["焦点在背景"]
+
+  SPLITDIOPTER:
+    command: /SPLITDIOPTER
+    canonical_name: split_diopter
+    category: FOCUS
+    kind: focus
+    definition: "A split-field lens keeps two distances in focus together, one close to the camera and one far away, divided by a soft blurred line."
+    params: []
+    writes: {focus.special: SPLIT}
+    sources: [SRC-001, SRC-004]
+    confidence: HIGH
+    aliases: [/DIOPTER, /SPLITFOCUS]
+    conflicts: [RACKFOCUS]
+    compatible_with: [FGLAYER, DEEPSTAGING, STATIC]
+    image_behavior: "A near subject on one side and a far subject on the other are both sharp; a soft seam runs between them along a vertical edge."
+    video_behavior: "Both planes stay sharp; neither subject crosses the seam."
+    markers:
+      en: ["split[- ]diopter", "both sharp"]
+      zh: ["分屈光"]
+
+  # ---------------------------------------------------------------- COMPOSITION
+  CENTER:
+    command: /CENTER
+    canonical_name: centered_composition
+    category: COMPOSITION
+    kind: composition
+    definition: "The subject sits at the center of the frame."
+    params: []
+    writes: {comp.placement: CENTER}
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/CENTERED, /CENTRED, /CENTRE]
+    conflicts: [THIRDS]
+    compatible_with: [SYMMETRY, FRONTAL, TOPDOWN]
+    image_behavior: "Subject at the center of the frame."
+    video_behavior: "Subject stays at the center of the frame."
+    markers:
+      en: ["cent(er|re)"]
+      zh: ["居中"]
+
+  THIRDS:
+    command: /THIRDS
+    canonical_name: rule_of_thirds
+    category: COMPOSITION
+    kind: composition
+    definition: "The subject sits on a third line. /THIRDS:L or :R names which third."
+    params: [dir_lr]
+    writes: {comp.placement: "THIRD_$dir"}
+    sources: [SRC-001, SRC-003, SRC-004, SRC-005, SRC-006]
+    confidence: HIGH
+    aliases: [/RULEOFTHIRDS, /THIRD]
+    conflicts: [CENTER]
+    compatible_with: [LOOKROOM, THREEQUARTER, NEGSPACE]
+    image_behavior: "Subject on the left or right third line."
+    video_behavior: "Subject stays on the stated third line."
+    markers:
+      en: ["third"]
+      zh: ["三分"]
+
+  SYMMETRY:
+    command: /SYMMETRY
+    canonical_name: symmetrical_composition
+    category: COMPOSITION
+    kind: composition
+    definition: "The frame is balanced as a mirror image around the vertical center line."
+    params: []
+    writes: {comp.symmetry: "TRUE"}
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/SYMMETRIC, /SYMMETRICAL]
+    conflicts: [DUTCH]
+    compatible_with: [CENTER, TOPDOWN, FRONTAL]
+    image_behavior: "Mirror-balanced frame."
+    video_behavior: "The frame stays mirror-balanced."
+    markers:
+      en: ["symmetr"]
+      zh: ["对称"]
+
+  NEGSPACE:
+    command: /NEGSPACE
+    canonical_name: negative_space
+    category: COMPOSITION
+    kind: composition
+    definition: "A large empty area in the frame around the subject. /NEGSPACE:L|R|UP|DOWN names where."
+    params: [side]
+    writes: {comp.negspace: "TRUE"}
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/NEGATIVESPACE, /EMPTYSPACE]
+    conflicts: []
+    compatible_with: [THIRDS, EWS, HIGHANGLE]
+    image_behavior: "A large empty area on the stated side."
+    video_behavior: "A large empty area stays on the stated side."
+    markers:
+      en: ["empty (area|space)", "negative space"]
+      zh: ["留白"]
+
+  HEADROOM:
+    command: /HEADROOM
+    canonical_name: headroom
+    category: COMPOSITION
+    kind: composition
+    definition: "How much space sits above the head. /HEADROOM:TIGHT|NORMAL|LOOSE."
+    params: [level]
+    writes: {comp.headroom: "$level"}
+    sources: [SRC-001, SRC-004, SRC-005]
+    confidence: HIGH
+    aliases: [/HEADSPACE]
+    conflicts: []
+    compatible_with: [CU, MS, MCU]
+    image_behavior: "The stated amount of space above the head."
+    video_behavior: "The head keeps the stated space above it."
+    markers:
+      en: ["above .{0,24}head|headroom|top of the head"]
+      zh: ["头部空间"]
+
+  LOOKROOM:
+    command: /LOOKROOM
+    canonical_name: lookroom
+    category: COMPOSITION
+    kind: composition
+    definition: "Open space on the side the subject faces. /LOOKROOM:L|R = the empty side of the frame."
+    params: [dir_lr]
+    writes: {comp.lookroom: "$dir"}
+    sources: [SRC-001, SRC-004]
+    confidence: HIGH
+    aliases: [/LEADROOM, /NOSEROOM, /LOOKSPACE]
+    conflicts: []
+    compatible_with: [THIRDS, PROFILE, THREEQUARTER]
+    image_behavior: "More open space on the stated side, in front of the face."
+    video_behavior: "More open space stays on the stated side."
+    markers:
+      en: ["open space"]
+      zh: ["视线空间"]
+
+  LEADLINES:
+    command: /LEADLINES
+    canonical_name: leading_lines
+    category: COMPOSITION
+    kind: composition
+    definition: "Lines in the scene (roads, rails, edges) lead the eye to the subject."
+    params: []
+    writes: {comp.leadlines: "TRUE"}
+    sources: [SRC-001, SRC-003, SRC-004, SRC-005]
+    confidence: HIGH
+    aliases: [/LEADINGLINES]
+    conflicts: []
+    compatible_with: [CENTER, WS, TOPDOWN]
+    image_behavior: "Existing lines in the scene run toward the subject."
+    video_behavior: "Existing lines in the scene run toward the subject."
+    markers:
+      en: ["lines .*lead|lead(ing)? lines"]
+      zh: ["引导线"]
+
+  FRAMEINFRAME:
+    command: /FRAMEINFRAME
+    canonical_name: frame_within_frame
+    category: COMPOSITION
+    kind: composition
+    definition: "An opening in the scene (door, window, arch) frames the subject inside the frame."
+    params: []
+    writes: {comp.frameinframe: "TRUE"}
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+    aliases: [/FRAMEWITHINFRAME, /FRAMED]
+    conflicts: []
+    compatible_with: [CENTER, SYMMETRY, FGLAYER]
+    image_behavior: "An existing opening in the scene frames the subject."
+    video_behavior: "An existing opening in the scene frames the subject."
+    markers:
+      en: ["framed (by|inside|within)"]
+      zh: ["框中框"]
+
+  FGLAYER:
+    command: /FGLAYER
+    canonical_name: foreground_layer
+    category: COMPOSITION
+    kind: composition
+    definition: "Something sits between the camera and the subject in the near foreground (partially obstructing or framing)."
+    params: [label]
+    writes: {comp.fglayer: "TRUE"}
+    sources: [SRC-001, SRC-003, SRC-004, SRC-005]
+    confidence: HIGH
+    aliases: [/FOREGROUND, /FGOBSTRUCTION, /REPOUSSOIR]
+    conflicts: []
+    compatible_with: [TRUCK, SLIDER, BGFOCUS, DEEPSTAGING]
+    image_behavior: "An element from the scene in the near foreground, between camera and subject."
+    video_behavior: "An element from the scene stays in the near foreground."
+    markers:
+      en: ["near foreground|in the foreground"]
+      zh: ["前景"]
+
+  DEEPSTAGING:
+    command: /DEEPSTAGING
+    canonical_name: deep_staging
+    category: COMPOSITION
+    kind: composition
+    definition: "Subjects are placed at different depths (foreground, midground, background) instead of side by side."
+    params: []
+    writes: {comp.deepstaging: "TRUE"}
+    sources: [SRC-004, SRC-005]
+    confidence: MEDIUM
+    aliases: [/DEPTHSTAGING, /LAYERS]
+    conflicts: []
+    compatible_with: [DEEPFOCUS, TWOSHOT, THREESHOT]
+    image_behavior: "Subjects at different depths: one near, one farther back."
+    video_behavior: "Subjects stay at different depths."
+    markers:
+      en: ["farther back|different depths"]
+      zh: ["纵深"]
+
+  # ----------------------------------------------------------------- CONTINUITY
+  AXIS:
+    command: /AXIS
+    canonical_name: axis_of_action
+    category: CONTINUITY
+    kind: continuity
+    definition: "The 180-degree line between two subjects. /AXIS:A-B = A stays screen-left, B screen-right for every shot on this side of the line."
+    params: [axis]
+    writes: {cont.axis: "$axis"}
+    sources: [SRC-002, SRC-004]
+    confidence: HIGH
+    aliases: [/180, /AXIS180, /LINE, /180RULE]
+    conflicts: []
+    compatible_with: [OTS, SRS, TWOSHOT, EYELINE]
+    image_behavior: "A on the left side of the frame, B on the right."
+    video_behavior: "A stays on the left side of the frame, B on the right."
+    markers:
+      en: ["left side of the frame", "screen-left|frame-left"]
+      zh: ["画面左侧"]
+
+  CROSSAXIS:
+    command: /CROSSAXIS
+    canonical_name: cross_the_axis
+    category: CONTINUITY
+    kind: continuity
+    definition: "A declared, intentional crossing of the 180-degree line, with how it is made legible. /CROSSAXIS:MOVE|NEUTRAL|CUTAWAY|REESTABLISH|BLOCKING."
+    params: [method]
+    writes: {cont.cross: "$method"}
+    sources: [SRC-004, SRC-002]
+    confidence: MEDIUM
+    aliases: [/CROSSLINE, /CROSS]
+    conflicts: []
+    compatible_with: [ORBIT, AXIS]
+    image_behavior: "Not rendered in a single image; recorded for the shot list."
+    video_behavior: "When METHOD is MOVE the camera visibly travels across the line; other methods are editing notes."
+    markers:
+      en: ["cross"]
+      zh: ["越轴"]
+
+  EYELINE:
+    command: /EYELINE
+    canonical_name: eyeline
+    category: CONTINUITY
+    kind: continuity
+    definition: "Where a subject looks. /EYELINE:A>B, A>CAM (into the lens), A>OFFL / A>OFFR (off-screen left/right), A>OFFUP / A>OFFDOWN."
+    critical_rule: "A>CAM is 'looking into the lens'; it is not POV."
+    params: [relation]
+    writes: {cont.eyeline: "$relation"}
+    sources: [SRC-004, SRC-006, LOCAL-002]
+    confidence: HIGH
+    aliases: [/LOOK, /GAZE, /LOOKCAM, /LOOKATCAMERA]
+    conflicts: []
+    compatible_with: [OTS, SRS, POV, AXIS]
+    image_behavior: "State the gaze as a positive fact: whose eyes are on what."
+    video_behavior: "State the gaze as a positive fact that holds for the whole shot."
+    markers:
+      en: ["eyes are on", "looks? (directly )?(into|toward|at|off)"]
+      zh: ["视线", "看向", "注视", "直视"]
+
+  SCREEN:
+    command: /SCREEN
+    canonical_name: screen_direction
+    category: CONTINUITY
+    kind: continuity
+    definition: "Direction of travel on screen. /SCREEN:L2R, R2L, TOWARD (the camera), AWAY."
+    params: [screen]
+    writes: {cont.screen: "$screen"}
+    sources: [SRC-002, SRC-004, SRC-005B]
+    confidence: HIGH
+    aliases: [/SCREENDIRECTION, /DIRECTION]
+    conflicts: []
+    compatible_with: [TRACKSIDE, TRACK, WS, MATCHACTION]
+    image_behavior: "Pose the subject mid-stride heading in the stated screen direction."
+    video_behavior: "The subject moves in the stated screen direction for the whole shot."
+    markers:
+      en: ["frame-left toward frame-right|frame-right toward frame-left|toward the camera|away from the camera"]
+      zh: ["从左向右", "从右向左", "朝镜头", "远离镜头"]
+
+  SRS:
+    command: /SRS
+    canonical_name: shot_reverse_shot
+    category: CONTINUITY
+    kind: continuity
+    definition: "This shot is the reverse of the previous one in a dialogue pair: same lens and distance, mirrored position on the same side of the axis. /SRS:A>B = now looking at B from A's side."
+    params: [relation]
+    writes: {cont.srs: "$relation"}
+    sources: [SRC-002, SRC-004]
+    confidence: HIGH
+    aliases: [/REVERSE, /SHOTREVERSESHOT, /REVERSESHOT]
+    conflicts: []
+    compatible_with: [OTS, CLEANOTS, AXIS, EYELINE, MCU]
+    image_behavior: "Mirror the previous frame's camera position on the same side of the line."
+    video_behavior: "Mirror the previous shot's camera position on the same side of the line; keep lens and distance."
+    markers:
+      en: ["reverse", "mirror"]
+      zh: ["正反打"]
+
+  MATCHACTION:
+    command: /MATCHACTION
+    canonical_name: match_on_action
+    category: CONTINUITY
+    kind: continuity
+    definition: "Cut on action: this shot starts on the same movement the previous shot ended on."
+    params: [label]
+    writes: {cont.matchaction: "TRUE"}
+    sources: [SRC-002, SRC-004]
+    confidence: HIGH
+    aliases: [/CUTONACTION, /MATCHONACTION]
+    conflicts: []
+    compatible_with: [SCREEN, INSERT, CU]
+    image_behavior: "Pose the subject partway through the same action the previous shot ended on."
+    video_behavior: "Open on the continuation of the previous shot's action."
+    markers:
+      en: ["continu(es|ing) the (same )?(action|movement)|same (action|movement)"]
+      zh: ["动作剪辑", "延续"]
+
+  MATCHCUT:
+    command: /MATCHCUT
+    canonical_name: match_cut
+    category: CONTINUITY
+    kind: continuity
+    definition: "A cut linked by matching shape, motion or composition. /MATCHCUT:SHAPE|MOTION|COMPOSITION."
+    params: [kind]
+    writes: {cont.matchcut: "$kind"}
+    sources: [SRC-002, SRC-004, SRC-007]
+    confidence: HIGH
+    aliases: [/GRAPHICMATCH]
+    conflicts: []
+    compatible_with: [CENTER, SYMMETRY]
+    image_behavior: "Place the matched shape or composition in the same frame position as the previous shot."
+    video_behavior: "Place the matched shape or motion in the same frame position as the previous shot."
+    markers:
+      en: ["same (frame )?position|matches the previous"]
+      zh: ["匹配剪辑"]
+
+  REACTION:
+    command: /REACTION
+    canonical_name: reaction_shot
+    category: CONTINUITY
+    kind: continuity
+    definition: "Shot function: shows a character's reaction to an action or line. Pair with any size. /REACTION:A."
+    params: [subject]
+    writes: {cont.function: REACTION}
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: HIGH
+    aliases: [/REACT, /REACTIONSHOT]
+    conflicts: [INSERT, CUTAWAY]
+    compatible_with: [CU, MCU, SRS]
+    image_behavior: "The reacting face is readable in frame."
+    video_behavior: "The reacting face stays readable in frame."
+    markers:
+      en: ["react"]
+      zh: ["反应"]
+
+  INSERT:
+    command: /INSERT
+    canonical_name: insert_shot
+    category: CONTINUITY
+    kind: continuity
+    definition: "Shot function: a detail of an object or action that carries story. Pair with a tight size. /INSERT:LETTER."
+    params: [label]
+    writes: {cont.function: INSERT}
+    sources: [SRC-002, SRC-004, SRC-005B]
+    confidence: HIGH
+    aliases: [/DETAIL, /INSERTSHOT]
+    conflicts: [TWOSHOT, THREESHOT, GROUPSHOT, REACTION]
+    compatible_with: [ECU, CU, MACRO, POV, SHALLOW]
+    image_behavior: "The named object fills the frame."
+    video_behavior: "The named object fills the frame."
+    markers:
+      en: ["detail", "insert"]
+      zh: ["插入镜头", "细节"]
+
+  CUTAWAY:
+    command: /CUTAWAY
+    canonical_name: cutaway
+    category: CONTINUITY
+    kind: continuity
+    definition: "Shot function: a shot away from the main action (another place or thing) used to bridge an edit. /CUTAWAY:CLOCK."
+    params: [label]
+    writes: {cont.function: CUTAWAY}
+    sources: [SRC-004, SRC-005B]
+    confidence: HIGH
+    aliases: [/CUTAWAYSHOT, /BRIDGE]
+    conflicts: [REACTION]
+    compatible_with: [INSERT, WS, STATIC]
+    image_behavior: "The named thing or place, away from the main action."
+    video_behavior: "The named thing or place, away from the main action."
+    markers:
+      en: ["away from the main action|cutaway"]
+      zh: ["切出", "空镜"]
+
+  # ---------------------------------------------------------------------- STYLE
+  CINEMATIC:
+    command: /CINEMATIC
+    canonical_name: cinematic_style
+    category: STYLE
+    kind: style
+    definition: "A style word only. It sets no camera parameter (no lens, no aspect ratio, no movement, no depth of field)."
+    critical_rule: "CINEMATIC adds nothing to the camera in STRICT mode."
+    params: []
+    writes: {style.cinematic: "TRUE"}
+    sources: [SRC-003, SRC-004, SRC-005, LOCAL-001]
+    confidence: MEDIUM
+    aliases: [/FILMIC, /MOVIELOOK]
+    conflicts: []
+    compatible_with: [MS, WS, STATIC]
+    image_behavior: "At most one style word ('cinematic'); no camera additions."
+    video_behavior: "At most one style word ('cinematic', which H3 accepts as a style token); no camera additions."
+    markers:
+      en: ["cinematic"]
+      zh: ["电影感"]

@@ -1,0 +1,430 @@
+# Schema examples — cinematic-director-camera-dsl
+# id / title / input / note are written by hand. Each `output` is GENERATED from the real parser by
+# `python scripts/audit.py --sync`, and the audit fails when the parser stops producing it.
+# output.shots[].state lists only the fields that differ from an empty state; every other field keeps the
+# default of schemas/camera_dsl_schema.yaml. Paths: movement[0].speed = speed of the first movement.
+# Input layers use the test syntax: '@@director:' (priority 5), '@@storyboard:' (3), '@@nl:' (2).
+
+examples:
+  - id: EX-01
+    title: "Same camera intent for every adapter"
+    input: "/MS /LOWANGLE /DOLLYIN:SLOW /LENS50"
+    note: "spec section 24"
+    output:
+      status: OK
+      modes: [STRICT, VIDEO]
+      shots:
+        - label: S1
+          status: OK
+          commands:
+            - "/MS -> MS"
+            - "/LOWANGLE -> LOWANGLE"
+            - "/DOLLYIN:SLOW -> DOLLYIN {speed=SLOW}"
+            - "/LENS50 -> LENS {mm=50} (compact_grammar)"
+          state:
+            shot.size: MS
+            camera.angle: LOW
+            movement[0].type: dolly_in
+            movement[0].canonical: DOLLYIN
+            movement[0].direction: null
+            movement[0].amount: null
+            movement[0].speed: SLOW
+            movement[0].duration: null
+            movement[0].time: null
+            movement[0].start_position: MS
+            movement[0].end_position: null
+            movement[0].target: null
+            movement[0].origin: USER_SPECIFIED
+            movement[0].sequential: false
+            movement[0].step: 0
+            lens.focal_length: 50.0
+            meta.origins.shot.size: USER_SPECIFIED
+            meta.origins.camera.angle: USER_SPECIFIED
+            meta.origins.lens.focal_length: USER_SPECIFIED
+            meta.unspecified: [DOLLYIN.amount, DOLLYIN.end_position]
+  - id: EX-02
+    title: "Ground-level side tracking on a gimbal"
+    input: "/FS /GROUNDLEVEL /TRACKSIDE:R /GIMBAL"
+    note: "spec section 23 (the MiniMax H3 example)"
+    output:
+      status: OK
+      modes: [STRICT, VIDEO]
+      shots:
+        - label: S1
+          status: OK
+          commands:
+            - "/FS -> FS"
+            - "/GROUNDLEVEL -> GROUNDLEVEL"
+            - "/TRACKSIDE:R -> TRACKSIDE {dir_lr=R}"
+            - "/GIMBAL -> GIMBAL"
+          state:
+            shot.size: FS
+            camera.height: GROUND
+            movement[0].type: side_tracking
+            movement[0].canonical: TRACKSIDE
+            movement[0].direction: R
+            movement[0].amount: null
+            movement[0].speed: null
+            movement[0].duration: null
+            movement[0].time: null
+            movement[0].start_position: FS
+            movement[0].end_position: null
+            movement[0].target: null
+            movement[0].origin: USER_SPECIFIED
+            movement[0].sequential: false
+            movement[0].step: 0
+            rig.type: GIMBAL
+            rig.types: [GIMBAL]
+            rig.stability: STABILIZED
+            meta.origins.shot.size: USER_SPECIFIED
+            meta.origins.camera.height: USER_SPECIFIED
+            meta.origins.rig.type: USER_SPECIFIED
+            meta.unspecified: [TRACKSIDE.speed, TRACKSIDE.amount, TRACKSIDE.end_position]
+            meta.definitional[0].from: TRACKSIDE
+            meta.definitional[0].dimension: subject.orientation
+            meta.definitional[0].value: PROFILE
+  - id: EX-03
+    title: "Dialogue: over-the-shoulder with axis, eyeline and rack focus"
+    input: "/MCU /OTS:A>B /AXIS:A-B /EYELINE:B>A /RACKFOCUS:A>B"
+    note: "OTS:A>B = over A's shoulder onto B; the focus moves from A's shoulder to B"
+    output:
+      status: OK
+      modes: [STRICT, VIDEO]
+      shots:
+        - label: S1
+          status: OK
+          commands:
+            - "/MCU -> MCU"
+            - "/OTS:A>B -> OTS {relation=A>B}"
+            - "/AXIS:A-B -> AXIS {axis=A-B}"
+            - "/EYELINE:B>A -> EYELINE {relation=B>A}"
+            - "/RACKFOCUS:A>B -> RACKFOCUS {relation=A>B}"
+          state:
+            shot.size: MCU
+            shot.framing: [OTS]
+            shot.primary_subject: B
+            shot.foreground_subject: A
+            shot.viewpoint: OTS
+            shot.ots_variant: DIRTY
+            focus.transition.type: RACK
+            focus.transition.from: A
+            focus.transition.to: B
+            focus.transition.speed: null
+            continuity.axis: A-B
+            continuity.eyeline: [B>A]
+            meta.origins.shot.size: USER_SPECIFIED
+            meta.origins.shot.viewpoint: USER_SPECIFIED
+            meta.origins.focus.transition: USER_SPECIFIED
+            meta.definitional[0].from: OTS
+            meta.definitional[0].dimension: shot.ots_variant
+            meta.definitional[0].value: DIRTY
+  - id: EX-04
+    title: "POV is a viewpoint; looking into the lens is an eyeline"
+    input: "/POV:A /HANDHELD /EYELINE:B>CAM"
+    note: "regression REG-02: POV is not LOOK AT CAMERA"
+    output:
+      status: OK
+      modes: [STRICT, VIDEO]
+      shots:
+        - label: S1
+          status: OK
+          commands:
+            - "/POV:A -> POV {subject=A}"
+            - "/HANDHELD -> HANDHELD"
+            - "/EYELINE:B>CAM -> EYELINE {relation=B>CAM}"
+          state:
+            shot.framing: [POV]
+            shot.primary_subject: B
+            shot.viewpoint: POV
+            shot.pov_owner: A
+            rig.type: HANDHELD
+            rig.types: [HANDHELD]
+            rig.stability: HANDHELD
+            continuity.eyeline: [B>CAM]
+            meta.origins.shot.viewpoint: USER_SPECIFIED
+            meta.origins.rig.type: USER_SPECIFIED
+            meta.origins.shot.primary_subject: INFERRED_FROM_EYELINE
+  - id: EX-05
+    title: "Direction, amount and speed on one move"
+    input: "/MS /ORBIT:R:90:SLOW"
+    note: "grammar /COMMAND:DIRECTION:AMOUNT:SPEED; R = toward camera-right = counterclockwise from above"
+    output:
+      status: OK
+      modes: [STRICT, VIDEO]
+      shots:
+        - label: S1
+          status: OK
+          commands: ["/MS -> MS", "/ORBIT:R:90:SLOW -> ORBIT {dir_orbit=R, degrees=90, speed=SLOW}"]
+          state:
+            shot.size: MS
+            movement[0].type: orbit
+            movement[0].canonical: ORBIT
+            movement[0].direction: R
+            movement[0].amount.value: 90.0
+            movement[0].amount.unit: deg
+            movement[0].speed: SLOW
+            movement[0].duration: null
+            movement[0].time: null
+            movement[0].start_position: MS
+            movement[0].end_position: null
+            movement[0].target: null
+            movement[0].origin: USER_SPECIFIED
+            movement[0].sequential: false
+            movement[0].step: 0
+            meta.origins.shot.size: USER_SPECIFIED
+            meta.unspecified: [ORBIT.end_position]
+  - id: EX-06
+    title: "Simultaneous moves"
+    input: "/DOLLYIN /TILT:UP"
+    note: "spec section 20: commands in one segment happen together"
+    output:
+      status: OK
+      modes: [STRICT, VIDEO]
+      shots:
+        - label: S1
+          status: OK
+          commands: ["/DOLLYIN -> DOLLYIN", "/TILT:UP -> TILT {dir_ud=UP}"]
+          state:
+            movement[0].type: dolly_in
+            movement[0].canonical: DOLLYIN
+            movement[0].direction: null
+            movement[0].amount: null
+            movement[0].speed: null
+            movement[0].duration: null
+            movement[0].time: null
+            movement[0].start_position: null
+            movement[0].end_position: null
+            movement[0].target: null
+            movement[0].origin: USER_SPECIFIED
+            movement[0].sequential: false
+            movement[0].step: 0
+            movement[1].type: tilt
+            movement[1].canonical: TILT
+            movement[1].direction: UP
+            movement[1].amount: null
+            movement[1].speed: null
+            movement[1].duration: null
+            movement[1].time: null
+            movement[1].start_position: null
+            movement[1].end_position: null
+            movement[1].target: null
+            movement[1].origin: USER_SPECIFIED
+            movement[1].sequential: false
+            movement[1].step: 0
+            meta.unspecified:
+              - DOLLYIN.speed
+              - DOLLYIN.amount
+              - DOLLYIN.end_position
+              - TILT.speed
+              - TILT.amount
+              - TILT.end_position
+  - id: EX-07
+    title: "Sequential moves are not a conflict"
+    input: "/WS 0-3s: /PAN:R 3-7s: /DOLLYIN:SLOW"
+    note: "spec section 20: time codes open segments"
+    output:
+      status: WARN
+      modes: [STRICT, VIDEO]
+      shots:
+        - label: S1
+          status: WARN
+          commands:
+            - "/WS -> WS"
+            - "[0-3s] /PAN:R -> PAN {dir_lr=R}"
+            - "[3-7s] /DOLLYIN:SLOW -> DOLLYIN {speed=SLOW}"
+          diagnostics: ["R10-SEQUENCE-IN-ONE-CLIP [WARNING] Several moves one after another inside one generated clip. Valid DSL; some models blend them."]
+          state:
+            shot.size: WS
+            movement[0].type: pan
+            movement[0].canonical: PAN
+            movement[0].direction: R
+            movement[0].amount: null
+            movement[0].speed: null
+            movement[0].duration: 3.0
+            movement[0].time: [0.0, 3.0]
+            movement[0].start_position: WS
+            movement[0].end_position: null
+            movement[0].target: null
+            movement[0].origin: USER_SPECIFIED
+            movement[0].sequential: true
+            movement[0].step: 1
+            movement[1].type: dolly_in
+            movement[1].canonical: DOLLYIN
+            movement[1].direction: null
+            movement[1].amount: null
+            movement[1].speed: SLOW
+            movement[1].duration: 4.0
+            movement[1].time: [3.0, 7.0]
+            movement[1].start_position: WS
+            movement[1].end_position: null
+            movement[1].target: null
+            movement[1].origin: USER_SPECIFIED
+            movement[1].sequential: true
+            movement[1].step: 2
+            meta.origins.shot.size: USER_SPECIFIED
+            meta.unspecified: [PAN.speed, PAN.amount, PAN.end_position, DOLLYIN.amount, DOLLYIN.end_position]
+  - id: EX-08
+    title: "Opposite directions at the same time"
+    input: "/PAN:L /PAN:R"
+    note: "SEQUENTIAL_ONLY: valid only as a sequence"
+    output:
+      status: ERROR
+      modes: [STRICT, VIDEO]
+      shots:
+        - label: S1
+          status: ERROR
+          commands: ["/PAN:L -> PAN {dir_lr=L}", "/PAN:R -> PAN {dir_lr=R}"]
+          diagnostics: ["CH-OPPOSITE [SEQUENTIAL_ONLY] /PAN in opposite directions at the same time."]
+          state:
+            movement[0].type: pan
+            movement[0].canonical: PAN
+            movement[0].direction: L
+            movement[0].amount: null
+            movement[0].speed: null
+            movement[0].duration: null
+            movement[0].time: null
+            movement[0].start_position: null
+            movement[0].end_position: null
+            movement[0].target: null
+            movement[0].origin: USER_SPECIFIED
+            movement[0].sequential: false
+            movement[0].step: 0
+            movement[1].type: pan
+            movement[1].canonical: PAN
+            movement[1].direction: R
+            movement[1].amount: null
+            movement[1].speed: null
+            movement[1].duration: null
+            movement[1].time: null
+            movement[1].start_position: null
+            movement[1].end_position: null
+            movement[1].target: null
+            movement[1].origin: USER_SPECIFIED
+            movement[1].sequential: false
+            movement[1].step: 0
+            meta.unspecified: [PAN.speed, PAN.amount, PAN.end_position]
+  - id: EX-09
+    title: "Two shot sizes at once"
+    input: "/WS /CU"
+    note: HARD_CONFLICT
+    output:
+      status: ERROR
+      modes: [STRICT, VIDEO]
+      shots:
+        - label: S1
+          status: ERROR
+          commands: ["/WS -> WS", "/CU -> CU"]
+          diagnostics: ["DIM-EXCLUSIVE [HARD_CONFLICT] /WS and /CU set shot.size to different values (WS vs CU)."]
+          state:
+            shot.size: WS
+            meta.origins.shot.size: USER_SPECIFIED
+  - id: EX-10
+    title: "Legacy names"
+    input: "/WIDE /PORTRAIT"
+    note: "both are ambiguous old names: /WIDE is read as a wide SHOT (not a lens), /PORTRAIT as the portrait LENS class (no close-up, no shallow focus); each gets a warning"
+    output:
+      status: WARN
+      modes: [STRICT, VIDEO]
+      shots:
+        - label: S1
+          status: WARN
+          commands: ["/WIDE -> WS (legacy_ambiguous)", "/PORTRAIT -> PORTRAITLENS (legacy_ambiguous)"]
+          diagnostics:
+            - "A03-AMBIGUOUS-LEGACY [WARNING] WIDE is read as a wide SHOT. For a wide-angle LENS use /WIDEANGLE (REG-01)."
+            - "A03-AMBIGUOUS-LEGACY [WARNING] PORTRAIT has three readings: portrait LENS (~85mm, used here), vertical 9:16 FORMAT (aspect ratio is out of scope in v1), or a POSED portrait framing (use /CU or /MCU). Only the lens class is set; no shallow focus or close-up is added."
+          state:
+            shot.size: WS
+            lens.lens_type: PORTRAIT
+            meta.origins.shot.size: USER_SPECIFIED
+            meta.origins.lens.lens_type: USER_SPECIFIED
+  - id: EX-11
+    title: "Director suggestions never override the user"
+    input: "/MS @@director: /CU /DOLLYIN:SLOW /SHALLOW"
+    note: "spec sections 27 and 29: /CU is dropped, the rest is labelled DIRECTOR_SUGGESTED"
+    output:
+      status: OK
+      modes: [DIRECTOR, VIDEO]
+      shots:
+        - label: S1
+          status: OK
+          commands:
+            - "/MS -> MS"
+            - "/DOLLYIN:SLOW -> DOLLYIN {speed=SLOW} (DIRECTOR_SUGGESTED)"
+            - "/SHALLOW -> SHALLOW (DIRECTOR_SUGGESTED)"
+          diagnostics: ["P00-OVERRIDDEN [INFO] DIRECTOR_SUGGESTED /CU not applied: USER_SPECIFIED /MS has priority."]
+          state:
+            shot.size: MS
+            movement[0].type: dolly_in
+            movement[0].canonical: DOLLYIN
+            movement[0].direction: null
+            movement[0].amount: null
+            movement[0].speed: SLOW
+            movement[0].duration: null
+            movement[0].time: null
+            movement[0].start_position: MS
+            movement[0].end_position: null
+            movement[0].target: null
+            movement[0].origin: DIRECTOR_SUGGESTED
+            movement[0].sequential: false
+            movement[0].step: 0
+            focus.depth_of_field: SHALLOW
+            meta.origins.shot.size: USER_SPECIFIED
+            meta.origins.focus.depth_of_field: DIRECTOR_SUGGESTED
+            meta.unspecified: [DOLLYIN.amount, DOLLYIN.end_position]
+  - id: EX-12
+    title: "Shot list with a continuity error"
+    input: "S1: /WS /AXIS:A-B /SCREEN:L2R\nS2: /MS /AXIS:B-A /SCREEN:R2L"
+    note: "the line flips and travel reverses without a declared crossing"
+    output:
+      status: ERROR
+      modes: [STRICT, VIDEO]
+      diagnostics:
+        - "C01-AXIS-CROSSED [ERROR] S2: the line flips (A-B -> B-A) without a declared crossing."
+        - "C04-SCREEN-DIRECTION-REVERSED [ERROR] S2: travel reverses (L2R -> R2L); the audience reads a turn-around."
+      shots:
+        - label: S1
+          status: OK
+          commands: ["/WS -> WS", "/AXIS:A-B -> AXIS {axis=A-B}", "/SCREEN:L2R -> SCREEN {screen=L2R}"]
+          state:
+            shot.size: WS
+            continuity.axis: A-B
+            continuity.screen_direction: L2R
+            meta.origins.shot.size: USER_SPECIFIED
+        - label: S2
+          status: OK
+          commands: ["/MS -> MS", "/AXIS:B-A -> AXIS {axis=B-A}", "/SCREEN:R2L -> SCREEN {screen=R2L}"]
+          state:
+            shot.size: MS
+            continuity.axis: B-A
+            continuity.screen_direction: R2L
+            meta.origins.shot.size: USER_SPECIFIED
+            meta.label: S2
+  - id: EX-13
+    title: "Image mode keeps the camera position, not the move"
+    input: "MODE:IMAGE /FS /ORBIT:R:45"
+    note: "spec section 21"
+    output:
+      status: OK
+      modes: [IMAGE, STRICT]
+      shots:
+        - label: S1
+          status: OK
+          commands: ["/FS -> FS", "/ORBIT:R:45 -> ORBIT {dir_orbit=R, degrees=45}"]
+          state:
+            shot.size: FS
+            movement[0].type: orbit
+            movement[0].canonical: ORBIT
+            movement[0].direction: R
+            movement[0].amount.value: 45.0
+            movement[0].amount.unit: deg
+            movement[0].speed: null
+            movement[0].duration: null
+            movement[0].time: null
+            movement[0].start_position: FS
+            movement[0].end_position: null
+            movement[0].target: null
+            movement[0].origin: USER_SPECIFIED
+            movement[0].sequential: false
+            movement[0].step: 0
+            meta.origins.shot.size: USER_SPECIFIED
+            meta.unspecified: [ORBIT.speed, ORBIT.end_position]

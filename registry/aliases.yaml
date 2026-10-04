@@ -1,0 +1,320 @@
+# Alias Registry — every alias resolves to exactly one canonical command (or is declared out of scope).
+# relationship types
+#   semantic_alias     different word, same meaning            (PUSHIN -> DOLLYIN)
+#   abbreviation       short form                               (MCU is canonical; XCU -> ECU)
+#   spelling_variant   spelling / punctuation variant           (CENTRED -> CENTER)
+#   parameter_alias    alias that fixes an argument             (PANLEFT -> PAN:L)
+#   arg_dependent      resolution depends on the argument       (DOLLY:L -> TRUCK:L, DOLLY:IN -> DOLLYIN)
+#   rig_variant_alias  different rig, same picture              (JIB -> CRANE)
+#   composite          expands to several canonical commands    (HANDHELDFOLLOW -> HANDHELD + FOLLOW)
+#   legacy             one of the 20 original commands (spec section 15)
+#   legacy_ambiguous   legacy word with several readings; resolves to the camera reading and WARNS
+# 'args' are prepended to the user's own arguments. 'warning' is always shown when the alias is used.
+
+aliases:
+  # ---------------- legacy 20 that are aliases (the other 10 are canonical names)
+  OVERHEAD: {canonical: TOPDOWN, relationship: legacy, note: "Most sources use overhead = straight down; some list it as a height (research 04 #7)."}
+  WORMSVIEW: {canonical: WORMSEYE, relationship: legacy}
+  CLOSEUP: {canonical: CU, relationship: legacy}
+  MEDIUMSHOT: {canonical: MS, relationship: legacy}
+  FULLBODY: {canonical: FS, relationship: legacy}
+  TRACKING: {canonical: TRACK, relationship: legacy, note: "Generic tracking. For a side-by-side tracking shot use /TRACKSIDE (research 04 #16)."}
+  PUSHIN: {canonical: DOLLYIN, relationship: legacy, note: "A physical move, never a zoom (research 04 #11)."}
+  PULLOUT: {canonical: DOLLYOUT, relationship: legacy}
+  DUTCHTILT: {canonical: DUTCH, relationship: legacy, note: "A roll offset, not a TILT (research 04 #20)."}
+  PORTRAIT: {canonical: PORTRAITLENS, relationship: legacy_ambiguous, warning: "PORTRAIT has three readings: portrait LENS (~85mm, used here), vertical 9:16 FORMAT (aspect ratio is out of scope in v1), or a POSED portrait framing (use /CU or /MCU). Only the lens class is set; no shallow focus or close-up is added."}
+
+  # ---------------- shot size
+  ELS: {canonical: EWS, relationship: abbreviation}
+  EXTREMEWIDE: {canonical: EWS, relationship: semantic_alias}
+  EXTREMELONGSHOT: {canonical: EWS, relationship: semantic_alias}
+  XWS: {canonical: EWS, relationship: abbreviation}
+  WIDESHOT: {canonical: WS, relationship: semantic_alias}
+  WIDE: {canonical: WS, relationship: legacy_ambiguous, warning: "WIDE is read as a wide SHOT. For a wide-angle LENS use /WIDEANGLE (REG-01)."}
+  LS: {canonical: WS, relationship: legacy_ambiguous, warning: "LONG SHOT is read as a wide shot; some people use it for a full shot (/FS). Research 04 #3."}
+  LONGSHOT: {canonical: WS, relationship: legacy_ambiguous, warning: "LONG SHOT is read as a wide shot; some people use it for a full shot (/FS). Research 04 #3."}
+  FULLSHOT: {canonical: FS, relationship: semantic_alias}
+  MEDIUMFULL: {canonical: MFS, relationship: semantic_alias}
+  MWS: {canonical: MFS, relationship: abbreviation}
+  MEDIUMWIDE: {canonical: MFS, relationship: semantic_alias}
+  MLS: {canonical: MFS, relationship: legacy_ambiguous, warning: "MLS means knees-up here; one source uses it for mid-thigh (/COWBOY). Research 04 section 2."}
+  COWBOYSHOT: {canonical: COWBOY, relationship: semantic_alias}
+  AMERICANSHOT: {canonical: COWBOY, relationship: semantic_alias}
+  MEDIUM: {canonical: MS, relationship: semantic_alias}
+  MID: {canonical: MS, relationship: abbreviation}
+  MEDIUMCLOSEUP: {canonical: MCU, relationship: semantic_alias}
+  CLOSE: {canonical: CU, relationship: abbreviation}
+  EXTREMECLOSEUP: {canonical: ECU, relationship: semantic_alias}
+  XCU: {canonical: ECU, relationship: abbreviation}
+  BCU: {canonical: ECU, relationship: abbreviation, note: "British 'big close-up'."}
+
+  # ---------------- subject framing
+  SINGLESHOT: {canonical: SINGLE, relationship: semantic_alias}
+  CLEANSINGLE: {canonical: SINGLE, relationship: semantic_alias}
+  2SHOT: {canonical: TWOSHOT, relationship: abbreviation}
+  3SHOT: {canonical: THREESHOT, relationship: abbreviation}
+  GROUP: {canonical: GROUPSHOT, relationship: abbreviation}
+  ENSEMBLE: {canonical: GROUPSHOT, relationship: semantic_alias}
+  OVERTHESHOULDER: {canonical: OTS, relationship: semantic_alias}
+  OVERSHOULDER: {canonical: OTS, relationship: semantic_alias}
+  DIRTYSINGLE: {canonical: DIRTYOTS, relationship: semantic_alias}
+  FIRSTPERSON: {canonical: POV, relationship: semantic_alias}
+  SUBJECTIVE: {canonical: POV, relationship: semantic_alias}
+  FRONT: {canonical: FRONTAL, relationship: abbreviation}
+  FACING: {canonical: FRONTAL, relationship: semantic_alias}
+  3Q: {canonical: THREEQUARTER, relationship: abbreviation}
+  THREEQUARTERS: {canonical: THREEQUARTER, relationship: spelling_variant}
+  SIDEPROFILE: {canonical: PROFILE, relationship: semantic_alias}
+  SIDE: {canonical: PROFILE, relationship: abbreviation}
+  BACKVIEW: {canonical: REAR, relationship: semantic_alias}
+  FROMBEHIND: {canonical: REAR, relationship: semantic_alias}
+
+  # ---------------- angle
+  EYE: {canonical: EYELEVEL, relationship: abbreviation}
+  LEVEL: {canonical: EYELEVEL, relationship: abbreviation}
+  NEUTRALANGLE: {canonical: EYELEVEL, relationship: semantic_alias}
+  LOW: {canonical: LOWANGLE, relationship: abbreviation}
+  HEROANGLE: {canonical: LOWANGLE, relationship: semantic_alias}
+  UPSHOT: {canonical: LOWANGLE, relationship: semantic_alias}
+  HIGH: {canonical: HIGHANGLE, relationship: abbreviation}
+  DOWNSHOT: {canonical: HIGHANGLE, relationship: semantic_alias}
+  TOPSHOT: {canonical: TOPDOWN, relationship: semantic_alias}
+  FLATLAY: {canonical: TOPDOWN, relationship: semantic_alias}
+  GODSEYE: {canonical: TOPDOWN, relationship: semantic_alias}
+  BIRDSEYEVIEW: {canonical: BIRDSEYE, relationship: semantic_alias}
+  BIRDS: {canonical: BIRDSEYE, relationship: abbreviation}
+  WORMSEYEVIEW: {canonical: WORMSEYE, relationship: semantic_alias}
+  WORMS: {canonical: WORMSEYE, relationship: abbreviation}
+  DUTCHANGLE: {canonical: DUTCH, relationship: semantic_alias}
+  CANTED: {canonical: DUTCH, relationship: semantic_alias}
+  CANTEDANGLE: {canonical: DUTCH, relationship: semantic_alias}
+  OBLIQUE: {canonical: DUTCH, relationship: semantic_alias, args: [L, 8], note: "SRC-001: an oblique angle is a lighter Dutch tilt."}
+
+  # ---------------- height
+  GROUND: {canonical: GROUNDLEVEL, relationship: abbreviation}
+  FLOORLEVEL: {canonical: GROUNDLEVEL, relationship: semantic_alias}
+  FLOOR: {canonical: GROUNDLEVEL, relationship: abbreviation}
+  ANKLE: {canonical: ANKLELEVEL, relationship: abbreviation}
+  KNEE: {canonical: KNEELEVEL, relationship: abbreviation}
+  HIP: {canonical: HIPLEVEL, relationship: abbreviation}
+  WAISTLEVEL: {canonical: HIPLEVEL, relationship: semantic_alias}
+  WAIST: {canonical: HIPLEVEL, relationship: abbreviation}
+  CHEST: {canonical: CHESTLEVEL, relationship: abbreviation}
+  SHOULDERHEIGHT: {canonical: SHOULDERLEVEL, relationship: semantic_alias}
+  ABOVEEYE: {canonical: ELEVATED, relationship: semantic_alias}
+  RAISED: {canonical: ELEVATED, relationship: semantic_alias}
+  AERIALVIEW: {canonical: AERIAL, relationship: semantic_alias}
+
+  # ---------------- rotation
+  PANLEFT: {canonical: PAN, relationship: parameter_alias, args: [L]}
+  PANRIGHT: {canonical: PAN, relationship: parameter_alias, args: [R]}
+  PANL: {canonical: PAN, relationship: parameter_alias, args: [L]}
+  PANR: {canonical: PAN, relationship: parameter_alias, args: [R]}
+  TILTUP: {canonical: TILT, relationship: parameter_alias, args: [UP]}
+  TILTDOWN: {canonical: TILT, relationship: parameter_alias, args: [DOWN]}
+  BARRELROLL: {canonical: ROLL, relationship: parameter_alias, args: [CW, 360]}
+  ROLLCW: {canonical: ROLL, relationship: parameter_alias, args: [CW]}
+  ROLLCCW: {canonical: ROLL, relationship: parameter_alias, args: [CCW]}
+  WHIP: {canonical: WHIPPAN, relationship: abbreviation}
+  SWISHPAN: {canonical: WHIPPAN, relationship: semantic_alias}
+  SWISH: {canonical: WHIPPAN, relationship: abbreviation}
+
+  # ---------------- translation
+  PUSH: {canonical: DOLLYIN, relationship: semantic_alias}
+  DOLLYFORWARD: {canonical: DOLLYIN, relationship: semantic_alias}
+  SUPERDOLLY: {canonical: DOLLYIN, relationship: parameter_alias, args: [LARGE, FAST], note: "Higgsfield preset name (SRC-002); measured on H3 as Push In + large + fast (SRC-009 shots/super-dolly-in.md)."}
+  PULLBACK: {canonical: DOLLYOUT, relationship: semantic_alias}
+  PULL: {canonical: DOLLYOUT, relationship: semantic_alias}
+  DOLLYBACK: {canonical: DOLLYOUT, relationship: semantic_alias}
+  DOLLY: {relationship: arg_dependent, by_arg: {IN: DOLLYIN, OUT: DOLLYOUT, FWD: DOLLYIN, BACK: DOLLYOUT, L: "TRUCK:L", R: "TRUCK:R"}, warning_on: {L: "Dolly Left/Right (Higgsfield/fal naming) is a TRUCK: the camera slides sideways.", R: "Dolly Left/Right (Higgsfield/fal naming) is a TRUCK: the camera slides sideways."}, sources: [SRC-002, SRC-003]}
+  TRUCKLEFT: {canonical: TRUCK, relationship: parameter_alias, args: [L]}
+  TRUCKRIGHT: {canonical: TRUCK, relationship: parameter_alias, args: [R]}
+  CRAB: {canonical: TRUCK, relationship: semantic_alias}
+  SLIDE: {canonical: TRUCK, relationship: semantic_alias, note: "The movement. The rig is /SLIDER (research 04 #18)."}
+  LATERAL: {canonical: TRUCK, relationship: semantic_alias}
+  PEDESTALUP: {canonical: PEDESTAL, relationship: parameter_alias, args: [UP]}
+  PEDESTALDOWN: {canonical: PEDESTAL, relationship: parameter_alias, args: [DOWN]}
+  PEDUP: {canonical: PEDESTAL, relationship: parameter_alias, args: [UP]}
+  PEDDOWN: {canonical: PEDESTAL, relationship: parameter_alias, args: [DOWN]}
+
+  # ---------------- tracking
+  TRACKINGSHOT: {canonical: TRACK, relationship: semantic_alias}
+  FOLLOWSHOT: {canonical: TRACK, relationship: semantic_alias}
+  FOLLOWING: {canonical: FOLLOW, relationship: semantic_alias}
+  FOLLOWBEHIND: {canonical: FOLLOW, relationship: semantic_alias}
+  LEADING: {canonical: LEAD, relationship: semantic_alias}
+  LEADINGSHOT: {canonical: LEAD, relationship: semantic_alias}
+  BACKTRACK: {canonical: LEAD, relationship: semantic_alias}
+  SIDETRACK: {canonical: TRACKSIDE, relationship: semantic_alias}
+  SIDETRACKING: {canonical: TRACKSIDE, relationship: semantic_alias}
+  PARALLEL: {canonical: TRACKSIDE, relationship: semantic_alias}
+  ARC: {canonical: ORBIT, relationship: semantic_alias, args: [PARTIAL], note: "Arc = partial orbit (SRC-002 camera:63-64)."}
+  ARCSHOT: {canonical: ORBIT, relationship: semantic_alias, args: [PARTIAL]}
+  CIRCLE: {canonical: ORBIT, relationship: semantic_alias}
+  ORBIT360: {canonical: ORBIT, relationship: parameter_alias, args: [FULL]}
+
+  # ---------------- complex
+  JIB: {canonical: CRANE, relationship: rig_variant_alias}
+  BOOM: {canonical: CRANE, relationship: rig_variant_alias}
+  CRANEUP: {canonical: CRANE, relationship: parameter_alias, args: [UP]}
+  CRANEDOWN: {canonical: CRANE, relationship: parameter_alias, args: [DOWN]}
+  JIBUP: {canonical: CRANE, relationship: rig_variant_alias, args: [UP]}
+  JIBDOWN: {canonical: CRANE, relationship: rig_variant_alias, args: [DOWN]}
+  BOOMUP: {canonical: CRANE, relationship: rig_variant_alias, args: [UP]}
+  BOOMDOWN: {canonical: CRANE, relationship: rig_variant_alias, args: [DOWN]}
+  FLYTHRU: {canonical: FLYTHROUGH, relationship: spelling_variant}
+  PASSTHROUGH: {canonical: FLYTHROUGH, relationship: semantic_alias}
+  THROUGH: {canonical: FLYTHROUGH, relationship: abbreviation}
+  VERTIGO: {canonical: DOLLYZOOM, relationship: semantic_alias}
+  ZOLLY: {canonical: DOLLYZOOM, relationship: semantic_alias}
+  CONTRAZOOM: {canonical: DOLLYZOOM, relationship: semantic_alias}
+
+  # ---------------- aerial
+  DRONESHOT: {canonical: DRONEVIEW, relationship: legacy_ambiguous, warning: "'Drone shot' is read as the drone VIEWPOINT. For drone movement add /FLYOVER or /DRONEREVEAL."}
+  OVERFLIGHT: {canonical: FLYOVER, relationship: semantic_alias}
+  AERIALREVEAL: {canonical: DRONEREVEAL, relationship: semantic_alias}
+  AERIALPULLBACK: {canonical: DRONEREVEAL, relationship: parameter_alias, args: [BACK], note: "SRC-009 shots/aerial-pullback.md."}
+
+  # ---------------- rig
+  LOCKED: {canonical: STATIC, relationship: semantic_alias}
+  LOCKEDOFF: {canonical: STATIC, relationship: semantic_alias}
+  STILL: {canonical: STATIC, relationship: semantic_alias}
+  FIXED: {canonical: STATIC, relationship: semantic_alias}
+  STICKS: {canonical: TRIPOD, relationship: semantic_alias}
+  SHAKYCAM: {canonical: HANDHELD, relationship: parameter_alias, args: [STRONG]}
+  SHAKY: {canonical: HANDHELD, relationship: parameter_alias, args: [STRONG]}
+  HANDHELDFOLLOW: {relationship: composite, expands: [HANDHELD, FOLLOW]}
+  SHOULDERMOUNT: {canonical: SHOULDER, relationship: semantic_alias}
+  SHOULDERRIG: {canonical: SHOULDER, relationship: semantic_alias}
+  STEADI: {canonical: STEADICAM, relationship: abbreviation}
+  FLOATING: {canonical: STEADICAM, relationship: semantic_alias}
+  STABILIZER: {canonical: GIMBAL, relationship: semantic_alias}
+  STABILISED: {canonical: GIMBAL, relationship: spelling_variant}
+  STABILIZED: {canonical: GIMBAL, relationship: spelling_variant}
+  RAIL: {canonical: SLIDER, relationship: semantic_alias}
+  UAV: {canonical: DRONE, relationship: semantic_alias}
+  FPVDRONE: {canonical: FPV, relationship: semantic_alias}
+  RACINGDRONE: {canonical: FPV, relationship: semantic_alias}
+
+  # ---------------- lens
+  FOCAL: {canonical: LENS, relationship: semantic_alias}
+  MM: {canonical: LENS, relationship: abbreviation}
+  ULTRAWIDELENS: {canonical: ULTRAWIDE, relationship: semantic_alias}
+  UWA: {canonical: ULTRAWIDE, relationship: abbreviation}
+  WIDELENS: {canonical: WIDEANGLE, relationship: semantic_alias}
+  WIDEANGLELENS: {canonical: WIDEANGLE, relationship: semantic_alias}
+  NORMALLENS: {canonical: NORMAL, relationship: semantic_alias}
+  STANDARDLENS: {canonical: NORMAL, relationship: semantic_alias}
+  TELE: {canonical: TELEPHOTO, relationship: abbreviation}
+  LONGLENS: {canonical: TELEPHOTO, relationship: semantic_alias}
+  MACROLENS: {canonical: MACRO, relationship: semantic_alias}
+  FISHEYELENS: {canonical: FISHEYE, relationship: semantic_alias}
+  ANAMORPHICLENS: {canonical: ANAMORPHIC, relationship: semantic_alias}
+
+  # ---------------- zoom
+  ZOOM: {relationship: arg_dependent, by_arg: {IN: ZOOMIN, OUT: ZOOMOUT}}
+  LENSZOOMIN: {canonical: ZOOMIN, relationship: semantic_alias}
+  ZOOMINLENS: {canonical: ZOOMIN, relationship: semantic_alias}
+  LENSZOOMOUT: {canonical: ZOOMOUT, relationship: semantic_alias}
+  ZOOMOUTLENS: {canonical: ZOOMOUT, relationship: semantic_alias}
+  SNAPZOOM: {canonical: CRASHZOOM, relationship: semantic_alias}
+  CRASH: {canonical: CRASHZOOM, relationship: abbreviation}
+
+  # ---------------- focus
+  SHALLOWDOF: {canonical: SHALLOW, relationship: semantic_alias}
+  SHALLOWFOCUS: {canonical: SHALLOW, relationship: semantic_alias}
+  BOKEH: {canonical: SHALLOW, relationship: semantic_alias, warning: "'Bokeh' alone tends to add round highlight balls; the adapters describe what is sharp and what dissolves instead (SRC-004 cinlang:222-235)."}
+  DEEP: {canonical: DEEPFOCUS, relationship: abbreviation}
+  DEEPDOF: {canonical: DEEPFOCUS, relationship: semantic_alias}
+  ALLSHARP: {canonical: DEEPFOCUS, relationship: semantic_alias}
+  PULLFOCUS: {canonical: RACKFOCUS, relationship: semantic_alias, args: [SLOW], note: "SRC-005: pull focus = the same shift, slower than a rack."}
+  FOCUSPULL: {canonical: RACKFOCUS, relationship: semantic_alias, args: [SLOW]}
+  RACK: {canonical: RACKFOCUS, relationship: abbreviation}
+  FOCUSFG: {canonical: FGFOCUS, relationship: spelling_variant}
+  FOREFOCUS: {canonical: FGFOCUS, relationship: semantic_alias}
+  FOCUSMG: {canonical: MGFOCUS, relationship: spelling_variant}
+  FOCUSBG: {canonical: BGFOCUS, relationship: spelling_variant}
+  DIOPTER: {canonical: SPLITDIOPTER, relationship: abbreviation}
+  SPLITFOCUS: {canonical: SPLITDIOPTER, relationship: semantic_alias}
+
+  # ---------------- composition
+  CENTERED: {canonical: CENTER, relationship: spelling_variant}
+  CENTRED: {canonical: CENTER, relationship: spelling_variant}
+  CENTRE: {canonical: CENTER, relationship: spelling_variant}
+  RULEOFTHIRDS: {canonical: THIRDS, relationship: semantic_alias}
+  THIRD: {canonical: THIRDS, relationship: spelling_variant}
+  SYMMETRIC: {canonical: SYMMETRY, relationship: spelling_variant}
+  SYMMETRICAL: {canonical: SYMMETRY, relationship: spelling_variant}
+  NEGATIVESPACE: {canonical: NEGSPACE, relationship: semantic_alias}
+  EMPTYSPACE: {canonical: NEGSPACE, relationship: semantic_alias}
+  HEADSPACE: {canonical: HEADROOM, relationship: semantic_alias}
+  LEADROOM: {canonical: LOOKROOM, relationship: semantic_alias}
+  NOSEROOM: {canonical: LOOKROOM, relationship: semantic_alias}
+  LOOKSPACE: {canonical: LOOKROOM, relationship: semantic_alias}
+  LEADINGLINES: {canonical: LEADLINES, relationship: semantic_alias}
+  FRAMEWITHINFRAME: {canonical: FRAMEINFRAME, relationship: semantic_alias}
+  FRAMED: {canonical: FRAMEINFRAME, relationship: semantic_alias}
+  FOREGROUND: {canonical: FGLAYER, relationship: semantic_alias, note: "Composition layer. For focus on the foreground use /FGFOCUS."}
+  FGOBSTRUCTION: {canonical: FGLAYER, relationship: semantic_alias}
+  REPOUSSOIR: {canonical: FGLAYER, relationship: semantic_alias}
+  DEPTHSTAGING: {canonical: DEEPSTAGING, relationship: semantic_alias}
+  LAYERS: {canonical: DEEPSTAGING, relationship: semantic_alias}
+
+  # ---------------- continuity
+  "180": {canonical: AXIS, relationship: abbreviation}
+  AXIS180: {canonical: AXIS, relationship: semantic_alias}
+  LINE: {canonical: AXIS, relationship: abbreviation}
+  180RULE: {canonical: AXIS, relationship: semantic_alias}
+  CROSSLINE: {canonical: CROSSAXIS, relationship: semantic_alias}
+  CROSS: {canonical: CROSSAXIS, relationship: abbreviation}
+  LOOK: {canonical: EYELINE, relationship: abbreviation}
+  GAZE: {canonical: EYELINE, relationship: semantic_alias}
+  LOOKCAM: {canonical: EYELINE, relationship: parameter_alias, arg_template: "{0}>CAM", default_arg: S, note: "The subject looks into the lens. Not POV (REG-02)."}
+  LOOKATCAMERA: {canonical: EYELINE, relationship: parameter_alias, arg_template: "{0}>CAM", default_arg: S}
+  SCREENDIRECTION: {canonical: SCREEN, relationship: semantic_alias}
+  DIRECTION: {canonical: SCREEN, relationship: abbreviation}
+  REVERSE: {canonical: SRS, relationship: abbreviation}
+  SHOTREVERSESHOT: {canonical: SRS, relationship: semantic_alias}
+  REVERSESHOT: {canonical: SRS, relationship: semantic_alias}
+  CUTONACTION: {canonical: MATCHACTION, relationship: semantic_alias}
+  MATCHONACTION: {canonical: MATCHACTION, relationship: semantic_alias}
+  GRAPHICMATCH: {canonical: MATCHCUT, relationship: parameter_alias, args: [SHAPE]}
+  REACT: {canonical: REACTION, relationship: abbreviation}
+  REACTIONSHOT: {canonical: REACTION, relationship: semantic_alias}
+  DETAIL: {canonical: INSERT, relationship: semantic_alias}
+  INSERTSHOT: {canonical: INSERT, relationship: semantic_alias}
+  CUTAWAYSHOT: {canonical: CUTAWAY, relationship: semantic_alias}
+  BRIDGE: {canonical: CUTAWAY, relationship: semantic_alias}
+
+  # ---------------- style
+  FILMIC: {canonical: CINEMATIC, relationship: semantic_alias}
+  MOVIELOOK: {canonical: CINEMATIC, relationship: semantic_alias}
+
+# Words the parser recognises but will not turn into camera commands (research 07 D28).
+out_of_scope:
+  TURNTABLE: {reason: "Subject rotation, not a camera move. Use /ORBIT if the camera should circle (REG-06).", sources: [SRC-002]}
+  LAZYSUSAN: {reason: "Subject on a turntable = subject rotation, not a camera move (REG-06).", sources: [SRC-002]}
+  SPIN: {reason: "Ambiguous subject spin. Use /ORBIT (camera circles) or /ROLL (camera rolls).", sources: []}
+  BULLETTIME: {reason: "Time-freeze effect plus camera sweep; not a single camera parameter. Measured as not achievable on H3 (SRC-009 shots/bullet-time.md).", sources: [SRC-001, SRC-002, SRC-009]}
+  HYPERLAPSE: {reason: "Playback speed / time manipulation is out of scope in v1.", sources: [SRC-001, SRC-002]}
+  TIMELAPSE: {reason: "Playback speed is out of scope in v1.", sources: [SRC-002, SRC-005]}
+  SLOWMO: {reason: "Playback speed is out of scope in v1.", sources: [SRC-005]}
+  SPEEDRAMP: {reason: "Playback speed is out of scope in v1.", sources: [SRC-002, SRC-005]}
+  LOWSHUTTER: {reason: "Shutter / motion-blur setting, not camera placement.", sources: [SRC-002]}
+  SNORRICAM: {reason: "Body-mounted rig; single-source platform preset. Measured on H3 only as a described result, never by naming the rig (SRC-009).", sources: [SRC-002, SRC-009]}
+  HEADTRACKING: {reason: "Higgsfield platform preset.", sources: [SRC-002]}
+  CARGRIP: {reason: "Vehicle rig preset (single source).", sources: [SRC-002]}
+  BUCKLEUP: {reason: "Higgsfield platform preset.", sources: [SRC-002]}
+  MOUTHIN: {reason: "Higgsfield platform preset (surreal transition).", sources: [SRC-002]}
+  LEVITATION: {reason: "Higgsfield platform preset.", sources: [SRC-002]}
+  ROBOARM: {reason: "Higgsfield platform preset.", sources: [SRC-002]}
+  SELFIE: {reason: "Composite of height + angle + rig + eyeline; write the parts (e.g. /HIGHANGLE /HANDHELD /EYELINE:A>CAM).", sources: [SRC-002]}
+  ASPECT: {reason: "Aspect ratio is out of scope in v1 (set it in the model, not in camera text; SRC-004 cinlang:442-460).", sources: [SRC-004]}
+  LETTERBOX: {reason: "Aspect ratio is out of scope; asking for bars paints them into the image (SRC-004 cinlang:458).", sources: [SRC-004]}
+  SCOPE: {reason: "'Scope' usually means a 2.39:1 aspect ratio (out of scope). For the lens look use /ANAMORPHIC.", sources: [SRC-004]}
+  ONESHOT: {reason: "Ambiguous: a single-person shot (/SINGLE) or a one-take oner. Say which.", sources: []}
+  SPIELBERG: {reason: "Director names are not camera commands (spec section 1-G). Write the camera parameters instead.", sources: [SRC-001, SRC-007]}
+  NOLAN: {reason: "Director names are not camera commands (spec section 1-G).", sources: [SRC-007]}
+  KUBRICK: {reason: "Director names are not camera commands (spec section 1-G).", sources: [SRC-004]}
+  TARANTINO: {reason: "Director names are not camera commands (spec section 1-G).", sources: [SRC-007]}
+  HITCHCOCK: {reason: "Director names are not camera commands. For the Vertigo effect use /DOLLYZOOM.", sources: [SRC-004]}

@@ -1,0 +1,447 @@
+# Conflict Matrix — how the validator decides (research 07 D04, D12, D13).
+# Order of evaluation for two commands active at the same time:
+#   1. specializes / duplicate  -> merge (INFO), no conflict
+#   2. pair_rules               -> explicit type (most specific wins)
+#   3. group_rules              -> e.g. STATIC vs any movement
+#   4. exclusive dims           -> same dimension, different core value = HARD_CONFLICT
+#   5. channels                 -> same movement channel, opposite direction = SEQUENTIAL_ONLY
+#   6. otherwise                -> VALID (two movements = VALID_COMBINATION)
+# Then the segment-level rules (semantic_rules) run: size-range logic, lens class ranges,
+# motion count, screen-direction consistency, POV/eyeline, unspecified directions.
+# Commands in different time segments never conflict with each other (VALID_SEQUENCE).
+
+types:
+  HARD_CONFLICT: "Cannot be true at the same time. Pick one, or put them in a sequence with a move or a cut between."
+  SOFT_CONFLICT: "Technically possible but pulling against each other or redundant. Warned, not blocked."
+  CONTEXT_DEPENDENT: "Valid only in some situations; the adapter must use the special wording given here."
+  SEQUENTIAL_ONLY: "Opposite directions on one movement channel: wrong at the same time, fine one after the other."
+  VALID_COMBINATION: "Different mechanisms working together."
+  SPECIAL_TECHNIQUE: "Looks contradictory but is a named technique; normalised to that technique."
+
+exclusive_dims:
+  - shot.size
+  - shot.subject_count
+  - shot.viewpoint
+  - shot.ots_variant
+  - subject.orientation
+  - camera.pitch
+  - camera.height
+  - camera.roll_offset
+  - rig.type
+  - rig.stability
+  - lens.focal_class
+  - focus.dof
+  - focus.target
+  - comp.placement
+  - comp.headroom
+  - cont.function
+  - track.mode
+
+channels:
+  move.z: [IN, OUT]
+  move.x: [L, R]
+  move.y: [UP, DOWN]
+  rot.yaw: [L, R]
+  rot.pitch: [UP, DOWN]
+  rot.roll: [CW, CCW]
+  zoom.dir: [IN, OUT]
+  orbit.dir: [L, R]
+  track.mode: [TRACK, FOLLOW, LEAD, SIDE]
+  focus.pull: [RACK]
+
+# Channels that count as a camera MOVE for the motion-count policy (focus pulls do not).
+move_channels: [move.z, move.x, move.y, rot.yaw, rot.pitch, rot.roll, zoom.dir, orbit.dir, track.mode]
+
+group_rules:
+  - id: G01-STATIC-MOVE
+    a: STATIC
+    b_kind: movement
+    type: HARD_CONFLICT
+    message: "STATIC means the camera does not move, rotate or zoom."
+    fix: "Drop /STATIC, or make it a phase: 0-2s: /STATIC 2-5s: <move> (or /STATIC THEN <move>)."
+    evidence: [SRC-005, SRC-004, SRC-005B, LOCAL-001]
+  - id: G02-TRIPOD-TRAVEL
+    a: TRIPOD
+    b_writes_any: [move.z, move.x, move.y, orbit.dir, track.mode]
+    type: HARD_CONFLICT
+    message: "A tripod stays at one spot; it can pan or tilt but cannot travel."
+    fix: "Drop /TRIPOD (the move implies its own rig), or replace the travel with /PAN or /TILT."
+    evidence: [SRC-004]
+
+pair_rules:
+  # ---------------- special techniques
+  - id: P01-DOLLYZOOM-IN
+    pair: [DOLLYIN, ZOOMOUT]
+    type: SPECIAL_TECHNIQUE
+    yields: "DOLLYZOOM:IN"
+    message: "Push in while zooming out = dolly zoom (subject keeps its size, background recedes)."
+    evidence: [SRC-002, SRC-004, SRC-001, SRC-009]
+  - id: P02-DOLLYZOOM-OUT
+    pair: [DOLLYOUT, ZOOMIN]
+    type: SPECIAL_TECHNIQUE
+    yields: "DOLLYZOOM:OUT"
+    message: "Pull out while zooming in = dolly zoom (subject keeps its size, background looms)."
+    evidence: [SRC-002, SRC-004, SRC-001, SRC-009]
+
+  # ---------------- context dependent
+  - id: P10-DOLLYIN-ZOOMIN
+    pair: [DOLLYIN, ZOOMIN]
+    type: CONTEXT_DEPENDENT
+    message: "Push and zoom in together compound the magnification; many models collapse them into one move."
+    fix: "Keep one unless the double push is the point."
+    evidence: [SRC-004, SRC-009]
+  - id: P11-DOLLYOUT-ZOOMOUT
+    pair: [DOLLYOUT, ZOOMOUT]
+    type: CONTEXT_DEPENDENT
+    message: "Pull and zoom out together compound the widening; models may collapse them."
+    fix: "Keep one unless the double pull is the point."
+    evidence: [SRC-004, SRC-009]
+  - id: P12-STATIC-RACK
+    pair: [STATIC, RACKFOCUS]
+    type: CONTEXT_DEPENDENT
+    message: "A locked frame with a focus change. Valid, but write it as 'the camera does not move; only the focus shifts', not just 'static'."
+    evidence: [SRC-005, SRC-009, SRC-011]
+  - id: P13-DUTCH-ROLL
+    pair: [DUTCH, ROLL]
+    type: CONTEXT_DEPENDENT
+    message: "A rolling Dutch angle: the cant changes during the shot. State where it starts and ends."
+    evidence: [SRC-005]
+  - id: P14-GROUND-HIGHANGLE
+    pair: [GROUNDLEVEL, HIGHANGLE]
+    type: CONTEXT_DEPENDENT
+    message: "Looking down from ground level only works if the subject is lower than the camera (in a hole, lying down, a small animal)."
+    evidence: [SRC-004]
+  - id: P15-AERIAL-LOWANGLE
+    pair: [AERIAL, LOWANGLE]
+    type: CONTEXT_DEPENDENT
+    message: "Looking up from the air only works at something taller than the camera (a tower, a cliff)."
+    evidence: [SRC-004]
+  - id: P16-DRONEVIEW-LOWANGLE
+    pair: [DRONEVIEW, LOWANGLE]
+    type: CONTEXT_DEPENDENT
+    message: "DRONEVIEW normally looks down; an explicit low angle overrides that and needs a taller subject."
+    evidence: [SRC-001]
+  - id: P17-ELEVATED-WORMSEYE
+    pair_any_a: [WORMSEYE]
+    pair_any_b: [ELEVATED, AERIAL]
+    type: CONTEXT_DEPENDENT
+    message: "A worm's-eye view is normally from the ground; from higher up it needs something far above the camera."
+    evidence: [SRC-002]
+  - id: P18-ULTRAWIDE-SHALLOW
+    pair: [ULTRAWIDE, SHALLOW]
+    type: CONTEXT_DEPENDENT
+    message: "Very wide lenses give deep focus; shallow focus needs the subject very close to the lens."
+    evidence: [SRC-004]
+  - id: P19-TELE-DEEP
+    pair: [TELEPHOTO, DEEPFOCUS]
+    type: CONTEXT_DEPENDENT
+    message: "Long lenses give shallow focus; deep focus needs a far subject and a small aperture."
+    evidence: [SRC-004, SRC-001]
+  - id: P20-SLIDER-ORBIT
+    pair: [SLIDER, ORBIT]
+    type: CONTEXT_DEPENDENT
+    message: "Only a curved slider can orbit; a straight rail cannot."
+    evidence: [SRC-001]
+  - id: P21-DEEPSTAGING-SHALLOW
+    pair: [DEEPSTAGING, SHALLOW]
+    type: CONTEXT_DEPENDENT
+    message: "Staging in depth with shallow focus leaves only one layer sharp; say which."
+    evidence: [SRC-004]
+  - id: P22-OTS-ECU
+    pair: [OTS, ECU]
+    type: CONTEXT_DEPENDENT
+    message: "An over-the-shoulder at extreme close-up leaves little room for the foreground shoulder."
+    evidence: [SRC-004]
+  - id: P23-EWS-OTS
+    pair: [EWS, OTS]
+    type: CONTEXT_DEPENDENT
+    message: "An over-the-shoulder onto a vast view: the foreground person frames a distant scene."
+    evidence: [SRC-004]
+  - id: P24-CU-TWOSHOT
+    pair: [CU, TWOSHOT]
+    type: CONTEXT_DEPENDENT
+    message: "Two faces at close-up distance only fit in a wide frame; in 9:16 stage them in depth."
+    evidence: [SRC-004]
+  - id: P25-FGFOCUS-RACK
+    pair: [FGFOCUS, RACKFOCUS]
+    type: CONTEXT_DEPENDENT
+    message: "A fixed focus target plus a rack: read as the rack's starting plane."
+    evidence: [SRC-005]
+  - id: P26-MGFOCUS-RACK
+    pair: [MGFOCUS, RACKFOCUS]
+    type: CONTEXT_DEPENDENT
+    message: "A fixed focus target plus a rack: read as the rack's starting plane."
+    evidence: [SRC-005]
+  - id: P27-BGFOCUS-RACK
+    pair: [BGFOCUS, RACKFOCUS]
+    type: CONTEXT_DEPENDENT
+    message: "A fixed focus target plus a rack: read as the rack's starting plane."
+    evidence: [SRC-005]
+  - id: P28-SYMMETRY-DUTCH
+    pair: [SYMMETRY, DUTCH]
+    type: CONTEXT_DEPENDENT
+    message: "A tilted horizon breaks mirror symmetry unless the symmetry is intentionally canted."
+    evidence: [SRC-004]
+  - id: P29-MACRO-FISHEYE
+    pair: [MACRO, FISHEYE]
+    type: CONTEXT_DEPENDENT
+    message: "Wide macro (probe) lenses exist but are rare; expect the model to pick one look."
+    evidence: []
+  - id: P30-AERIAL-HANDHELD
+    pair_any_a: [DRONEVIEW, FLYOVER, DRONEREVEAL, AERIAL]
+    pair_any_b: [HANDHELD, SHOULDER]
+    type: CONTEXT_DEPENDENT
+    message: "Handheld in the air only from an aircraft door; a drone cannot be handheld."
+    evidence: [SRC-002]
+
+  # ---------------- soft conflicts
+  - id: P40-HANDHELD-STABILIZER
+    pair_any_a: [HANDHELD, SHOULDER]
+    pair_any_b: [GIMBAL, STEADICAM]
+    type: SOFT_CONFLICT
+    message: "Handheld shake and stabilised smoothness pull against each other."
+    fix: "Keep /HANDHELD for shake or /GIMBAL|/STEADICAM for smoothness."
+    evidence: [SRC-001, SRC-002]
+  - id: P41-STEADICAM-GIMBAL
+    pair: [STEADICAM, GIMBAL]
+    type: SOFT_CONFLICT
+    message: "Two stabilisers; the picture is the same. Keep one."
+    evidence: [SRC-001]
+  - id: P42-GIMBAL-SLIDER
+    pair: [GIMBAL, SLIDER]
+    type: SOFT_CONFLICT
+    message: "Gimbal on a slider is unusual; both mean smooth movement. Keep the one that describes the move."
+    evidence: []
+  - id: P43-STATIC-STABILIZER
+    pair_any_a: [STATIC]
+    pair_any_b: [GIMBAL, STEADICAM, SLIDER]
+    type: SOFT_CONFLICT
+    message: "A stabiliser implies movement; for a locked camera /STATIC alone is enough."
+    evidence: [SRC-004]
+  - id: P44-FPV-GIMBAL
+    pair: [FPV, GIMBAL]
+    type: SOFT_CONFLICT
+    message: "FPV drones usually fly without a stabilising gimbal; the looks conflict."
+    evidence: [SRC-002]
+  - id: P45-BIRDSEYE-HIGHANGLE
+    pair: [BIRDSEYE, HIGHANGLE]
+    type: SOFT_CONFLICT
+    message: "Bird's-eye is steeper than a high angle (straight down). Keep one."
+    evidence: [SRC-001, SRC-002, SRC-005]
+  - id: P46-WORMSEYE-LOWANGLE
+    pair: [WORMSEYE, LOWANGLE]
+    type: SOFT_CONFLICT
+    message: "Worm's-eye is the extreme of a low angle (straight up). Keep one."
+    evidence: [SRC-002, SRC-005]
+  - id: P47-SYMMETRY-THIRDS
+    pair: [SYMMETRY, THIRDS]
+    type: SOFT_CONFLICT
+    message: "Mirror symmetry wants a centered subject; thirds wants it off-center."
+    evidence: [SRC-004]
+  - id: P48-DEEP-TARGET
+    pair_any_a: [DEEPFOCUS]
+    pair_any_b: [FGFOCUS, MGFOCUS, BGFOCUS]
+    type: SOFT_CONFLICT
+    message: "With deep focus everything is sharp; a single focus target adds nothing."
+    evidence: [SRC-004]
+  - id: P49-SPLIT-DEEP
+    pair: [SPLITDIOPTER, DEEPFOCUS]
+    type: SOFT_CONFLICT
+    message: "Deep focus already holds both planes; a split diopter is redundant."
+    evidence: [SRC-004]
+  - id: P50-SPLIT-RACK
+    pair: [SPLITDIOPTER, RACKFOCUS]
+    type: SOFT_CONFLICT
+    message: "A split diopter is the rack-free two-plane frame; racking defeats it."
+    evidence: [SRC-004]
+  - id: P51-INSERT-WIDE
+    pair_any_a: [INSERT]
+    pair_any_b: [EWS, WS, FS, MFS]
+    type: SOFT_CONFLICT
+    message: "An insert is a detail; a wide size cannot isolate it."
+    evidence: [SRC-004, SRC-002]
+  - id: P52-REACTION-EWS
+    pair: [REACTION, EWS]
+    type: SOFT_CONFLICT
+    message: "A reaction needs a readable face; at extreme wide it is lost."
+    evidence: [SRC-004]
+  - id: P53-REACTION-INSERT
+    pair: [REACTION, INSERT]
+    type: SOFT_CONFLICT
+    message: "Two different shot functions; a reaction shown only through an object detail must be stated."
+    evidence: [SRC-004]
+  - id: P54-OTS-SINGLE
+    pair_any_a: [OTS, DIRTYOTS]
+    pair_any_b: [SINGLE]
+    type: SOFT_CONFLICT
+    message: "A (dirty) over-the-shoulder shows part of a second person; for only one person use /CLEANOTS."
+    evidence: [SRC-004]
+  - id: P55-OTS-TWOSHOT
+    pair_any_a: [OTS, DIRTYOTS]
+    pair_any_b: [TWOSHOT]
+    type: SOFT_CONFLICT
+    message: "An OTS already holds both people (one as a foreground shoulder); a two-shot usually means both fully framed."
+    evidence: [SRC-004, SRC-002]
+  - id: P56-ORBIT-TRUCK
+    pair: [ORBIT, TRUCK]
+    type: SOFT_CONFLICT
+    message: "An orbit already travels sideways around the subject; an extra truck blurs the path."
+    evidence: [SRC-004, SRC-011]
+  - id: P57-ORBIT-PAN
+    pair: [ORBIT, PAN]
+    type: SOFT_CONFLICT
+    message: "An orbit already turns the camera to keep the subject centered; an extra pan fights it."
+    evidence: [SRC-004]
+  - id: P58-CRANE-PEDESTAL
+    pair: [CRANE, PEDESTAL]
+    type: SOFT_CONFLICT
+    message: "Both are vertical travel; a crane already includes the rise or fall."
+    evidence: [SRC-004]
+  - id: P59-CRANE-HANDHELD
+    pair: [CRANE, HANDHELD]
+    type: SOFT_CONFLICT
+    message: "A crane is a smooth arm move; handheld shake contradicts it."
+    evidence: [SRC-004]
+  - id: P60-FISHEYE-WIDE
+    pair: [FISHEYE, WIDEANGLE]
+    type: SOFT_CONFLICT
+    message: "A fisheye is an ultra-wide lens; keep one lens description."
+    evidence: [SRC-002]
+  - id: P61-TRACKSIDE-FRONTAL
+    pair: [TRACKSIDE, FRONTAL]
+    type: SOFT_CONFLICT
+    message: "Side tracking normally shows a profile; a subject facing the camera would be walking sideways."
+    evidence: [SRC-004]
+
+  # ---------------- hard conflicts that the dimension model cannot see
+  - id: P70-TOPDOWN-GROUND
+    pair_any_a: [TOPDOWN]
+    pair_any_b: [GROUNDLEVEL, ANKLELEVEL]
+    type: HARD_CONFLICT
+    message: "A camera on the ground cannot look straight down at a subject."
+    evidence: [SRC-002, SRC-004]
+  - id: P71-FOLLOW-FRONTAL
+    pair: [FOLLOW, FRONTAL]
+    type: HARD_CONFLICT
+    message: "Following from behind shows the subject's back, not the face."
+    fix: "Use /LEAD to see the face, or drop /FRONTAL."
+    evidence: [SRC-001, SRC-002]
+  - id: P72-LEAD-REAR
+    pair: [LEAD, REAR]
+    type: HARD_CONFLICT
+    message: "Leading in front shows the subject's face, not the back."
+    fix: "Use /FOLLOW to see the back."
+    evidence: [SRC-001]
+  - id: P73-CLEANOTS-TWOSHOT
+    pair: [CLEANOTS, TWOSHOT]
+    type: HARD_CONFLICT
+    message: "A clean over-the-shoulder keeps the foreground person out of frame; it cannot be a two-shot."
+    evidence: [SRC-004]
+  - id: P74-MACRO-WIDE
+    pair_any_a: [MACRO]
+    pair_any_b: [EWS, WS]
+    type: HARD_CONFLICT
+    message: "A macro lens magnifies a tiny detail; it cannot frame a wide view."
+    evidence: [SRC-002, SRC-004]
+  - id: P75-CRASH-DOLLYZOOM
+    pair: [CRASHZOOM, DOLLYZOOM]
+    type: HARD_CONFLICT
+    message: "A dolly zoom needs a zoom that exactly cancels the travel; a crash zoom cannot."
+    evidence: [SRC-009]
+  - id: P76-CRANE-SLIDER
+    pair: [CRANE, SLIDER]
+    type: HARD_CONFLICT
+    message: "A slider cannot make a crane move."
+    evidence: [SRC-001]
+  - id: P77-AERIAL-TRIPOD
+    pair_any_a: [DRONEVIEW, FLYOVER, DRONEREVEAL]
+    pair_any_b: [TRIPOD, SLIDER]
+    type: HARD_CONFLICT
+    message: "An aerial camera cannot be on a tripod or slider."
+    evidence: [SRC-001, SRC-002]
+
+  - id: P78-ECU-MANY
+    pair_any_a: [ECU]
+    pair_any_b: [TWOSHOT, THREESHOT, GROUPSHOT]
+    type: HARD_CONFLICT
+    message: "An extreme close-up shows one detail; it cannot hold two or more people."
+    evidence: [SRC-004, SRC-002]
+  - id: P79-CU-MANY
+    pair_any_a: [CU]
+    pair_any_b: [THREESHOT, GROUPSHOT]
+    type: HARD_CONFLICT
+    message: "A close-up cannot hold three or more faces."
+    evidence: [SRC-004]
+  - id: P80-INSERT-PEOPLE
+    pair_any_a: [INSERT]
+    pair_any_b: [TWOSHOT, THREESHOT, GROUPSHOT]
+    type: HARD_CONFLICT
+    message: "An insert is an object or action detail, not a frame of several people."
+    evidence: [SRC-004, SRC-002]
+
+  # ---------------- valid overrides of the dimension model
+  - id: P90-STATIC-DRONE
+    pair: [STATIC, DRONE]
+    type: VALID_COMBINATION
+    message: "A hovering drone: locked aerial frame."
+    evidence: [SRC-002]
+  - id: P91-DRONE-GIMBAL
+    pair: [DRONE, GIMBAL]
+    type: VALID_COMBINATION
+    message: "Drone cameras sit on a gimbal; smooth aerial movement."
+    evidence: []
+  - id: P92-INSERT-CUTAWAY
+    pair: [INSERT, CUTAWAY]
+    type: VALID_COMBINATION
+    message: "An insert used as a cutaway (a detail away from the main action)."
+    evidence: [SRC-004]
+
+semantic_rules:
+  - id: R01-SIZE-RANGE-START
+    type: HARD_CONFLICT
+    rule: "If a move gives a size range (MS>MCU) and a static size is also given, the static size must equal the range start."
+    evidence: [LOCAL-002, SRC-009]
+  - id: R02-SIZE-RANGE-DIRECTION
+    type: HARD_CONFLICT
+    rule: "DOLLYIN, ZOOMIN and CRASHZOOM:IN must end tighter than they start; DOLLYOUT, ZOOMOUT and CRASHZOOM:OUT must end wider. Equal start and end = SOFT (no visible change)."
+    evidence: [SRC-002, SRC-009]
+  - id: R03-LENS-CLASS-RANGE
+    type: HARD_CONFLICT
+    rule: "A focal length must fall in the stated lens class: ULTRAWIDE <=18, WIDE 18-35, NORMAL 35-70, PORTRAIT 70-110, TELE >=110 mm (boundaries overlap on purpose)."
+    evidence: [SRC-004, SRC-003, SRC-001]
+  - id: R04-THIRDS-LOOKROOM
+    type: HARD_CONFLICT
+    rule: "THIRDS:X with LOOKROOM:X is impossible: the open space is on the side opposite the subject."
+    evidence: [SRC-004]
+  - id: R05-TRACK-SCREEN
+    type: HARD_CONFLICT
+    rule: "TRACKSIDE:R needs SCREEN:L2R, TRACKSIDE:L needs SCREEN:R2L; FOLLOW needs AWAY (not TOWARD); LEAD needs TOWARD (not AWAY)."
+    evidence: [SRC-004, SRC-001]
+  - id: R06-POV-OWNER-LOOKCAM
+    type: HARD_CONFLICT
+    rule: "In /POV:A, A cannot look into the lens (/EYELINE:A>CAM): A is the camera. Another subject looking into the lens is valid (they look at A)."
+    evidence: [SRC-002, SRC-005B]
+  - id: R07-MOTION-OVERLOAD
+    type: SOFT_CONFLICT
+    rule: "Three or more camera moves at the same time (after merges; focus pulls not counted). Warned, not blocked: SRC-009 measured three complementary moves working on H3."
+    evidence: [SRC-002, SRC-004, SRC-010, SRC-009]
+  - id: R08-UNSPECIFIED-DIRECTION
+    type: WARNING
+    rule: "A directional move without a direction (PAN, TILT, TRUCK, PEDESTAL, CRANE, ROLL, WHIPPAN, TRACKSIDE, ORBIT) leaves the choice to the model."
+    evidence: [SRC-004, SRC-012]
+  - id: R09-STATE-JUMP
+    type: CONTEXT_DEPENDENT
+    rule: "In a sequence, a size or angle change between segments needs a move that can cause it (or a cut)."
+    evidence: [SRC-002, SRC-009]
+  - id: R10-SEQUENCE-IN-ONE-CLIP
+    type: WARNING
+    rule: "Sequential moves inside one generated clip are valid DSL but risky: SRC-004 says split into two clips; SRC-002 says time-code them. Adapters add a model-specific note."
+    evidence: [SRC-002, SRC-004]
+  - id: R11-SPEED-MISMATCH
+    type: SOFT_CONFLICT
+    rule: "The same channel given two different speeds at the same time."
+    evidence: [SRC-004]
+  - id: R12-DUPLICATE
+    type: INFO
+    rule: "The same command (or a command and the one it specializes) twice at the same time is merged."
+    evidence: []

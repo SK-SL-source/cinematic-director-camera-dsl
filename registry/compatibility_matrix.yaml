@@ -1,0 +1,297 @@
+# Compatibility Matrix — combinations with a documented case (or a definitional reason).
+# The validator must never flag any of these as HARD_CONFLICT (audit: CONFLICT AUDIT).
+# 'expect' is the validator result for the set when given at the same time:
+#   VALID_COMBINATION | VALID (static states only) | SOFT_OK (a SOFT warning such as motion count is allowed, never HARD)
+# evidence: source IDs + where; PRJ = no external case, valid by mechanism (research 07 D04).
+
+combinations:
+  - id: C01
+    set: [DOLLYIN, DUTCH]
+    expect: VALID_COMBINATION
+    why: "Closing tension plus instability."
+    evidence: ["SRC-002 camera:175"]
+  - id: C02
+    set: ["CRANE:UP", ORBIT]
+    expect: VALID_COMBINATION
+    why: "Epic reveal of scale while circling."
+    evidence: ["SRC-002 camera:176"]
+  - id: C03
+    set: [FPV, CRASHZOOM]
+    expect: VALID_COMBINATION
+    why: "Kinetic flight plus a sudden focus."
+    evidence: ["SRC-002 camera:177"]
+  - id: C04
+    set: [HANDHELD, FOLLOW]
+    expect: VALID_COMBINATION
+    why: "Raw realism plus pursuit."
+    evidence: ["SRC-002 camera:178", "SRC-009 shots/handheld.md"]
+  - id: C05
+    set: [ORBIT, "RACKFOCUS:FG>BG"]
+    expect: VALID_COMBINATION
+    why: "Arc move while pulling focus from the foreground."
+    evidence: ["SRC-007 01 prompt:22"]
+  - id: C06
+    set: [DOLLYOUT, "PAN:L"]
+    expect: VALID_COMBINATION
+    why: "Pull back while panning."
+    evidence: ["SRC-007 01 prompt:24"]
+  - id: C07
+    set: ["CRANE:UP", DOLLYOUT]
+    expect: VALID_COMBINATION
+    why: "Diagonal retreat while rising on the arm."
+    evidence: ["SRC-007 01 prompt:28"]
+  - id: C08
+    set: ["CRANE:UP", "TILT:DOWN"]
+    expect: VALID_COMBINATION
+    why: "Rise while tilting down to keep the subject; measured as the most complete H3 shot (SRC-011 claims a conflict, unmeasured)."
+    evidence: ["SRC-009 shots/crane-rise.md", "SRC-005 SKILL:104"]
+  - id: C09
+    set: [TRACK, "PEDESTAL:UP", "TILT:DOWN"]
+    expect: SOFT_OK
+    why: "Three complementary moves (crane rise built from primitives). Count warning only."
+    evidence: ["SRC-009 camera-grammar:71"]
+  - id: C10
+    set: [DOLLYOUT, "PEDESTAL:UP"]
+    expect: VALID_COMBINATION
+    why: "Aerial pullback: retreat and rise together."
+    evidence: ["SRC-009 shots/aerial-pullback.md"]
+  - id: C11
+    set: ["HANDHELD:STRONG", TRACK]
+    expect: VALID_COMBINATION
+    why: "Handheld run alongside the subject."
+    evidence: ["SRC-009 shots/handheld.md"]
+  - id: C12
+    set: [DOLLYIN, RACKFOCUS]
+    expect: VALID_COMBINATION
+    why: "Push in with a focus change."
+    evidence: ["SRC-011 movement-catalog.md:436"]
+  - id: C13
+    set: [ORBIT, "TILT:UP"]
+    expect: VALID_COMBINATION
+    why: "Arc plus tilt as one smooth compound move."
+    evidence: ["SRC-011 movement-catalog.md:437"]
+  - id: C14
+    set: ["CRANE:UP", "PAN:R"]
+    expect: VALID_COMBINATION
+    why: "Sweeping reveal; cranes are often combined with a pan."
+    evidence: ["SRC-011 movement-catalog.md:438", "SRC-005 SKILL:104"]
+  - id: C15
+    set: [DOLLYIN, "TILT:UP"]
+    expect: VALID_COMBINATION
+    why: "Spec section 20 simultaneous example."
+    evidence: ["spec section 20"]
+  - id: C16
+    set: ["PAN:R", "TRUCK:R"]
+    expect: VALID_COMBINATION
+    why: "Different mechanisms (rotation + translation)."
+    evidence: ["spec section 18", "SRC-005 SKILL:112"]
+  - id: C17
+    set: ["TILT:UP", "PEDESTAL:DOWN"]
+    expect: VALID_COMBINATION
+    why: "Lower the camera while tilting up to keep the subject framed."
+    evidence: ["SRC-004 lexicon:143-144", "PRJ"]
+  - id: C18
+    set: [DOLLYIN, LOWANGLE]
+    expect: VALID_COMBINATION
+    why: "Slow push in from a low angle toward an amazed face."
+    evidence: ["SRC-001 ref01:114"]
+  - id: C19
+    set: ["TRACKSIDE:R", GIMBAL, FS, GROUNDLEVEL]
+    expect: VALID_COMBINATION
+    why: "Spec section 23 H3 example."
+    evidence: ["spec section 23"]
+  - id: C20
+    set: [FOLLOW, DOLLYIN]
+    expect: VALID_COMBINATION
+    why: "The camera gains on the subject while following."
+    evidence: ["PRJ"]
+  - id: C21
+    set: [LEAD, STEADICAM]
+    expect: VALID_COMBINATION
+    why: "Walk-and-talk: steadicam leading the actors."
+    evidence: ["SRC-004 cinlang:385"]
+  - id: C22
+    set: [FPV, FLYTHROUGH]
+    expect: VALID_COMBINATION
+    why: "Drone flies through a gap."
+    evidence: ["SRC-001 ref01:123"]
+  - id: C23
+    set: [DRONEVIEW, FLYOVER]
+    expect: VALID_COMBINATION
+    why: "Aerial flyover from drone height."
+    evidence: ["SRC-001 SKILL:77"]
+  - id: C24
+    set: [DUTCH, HANDHELD]
+    expect: VALID
+    why: "Horror / unease combination."
+    evidence: ["SRC-001 SKILL:175"]
+  - id: C25
+    set: [LOWANGLE, WIDEANGLE]
+    expect: VALID
+    why: "Low wide lens makes the space tower."
+    evidence: ["SRC-006 SKILL:94", "SRC-004 cinlang:174"]
+  - id: C26
+    set: [CU, SHALLOW, PORTRAITLENS]
+    expect: VALID
+    why: "Emotional close-up on a portrait lens with shallow focus."
+    evidence: ["SRC-002 camera:244", "SRC-004 cinlang:134"]
+  - id: C27
+    set: [EWS, HIGHANGLE]
+    expect: VALID
+    why: "Small, vulnerable figure in a vast space."
+    evidence: ["SRC-001 SKILL:189"]
+  - id: C28
+    set: [WORMSEYE, EWS]
+    expect: VALID
+    why: "Awe: extreme wide from below."
+    evidence: ["SRC-001 SKILL:193"]
+  - id: C29
+    set: [TOPDOWN, "ROLL:CW"]
+    expect: VALID_COMBINATION
+    why: "God's-eye spiral: top-down while rotating."
+    evidence: ["SRC-001 ref01:127"]
+  - id: C30
+    set: [FOLLOW, REAR]
+    expect: VALID_COMBINATION
+    why: "Following from behind shows the back (definitional)."
+    evidence: ["SRC-001 ref01:115"]
+  - id: C31
+    set: ["TRACKSIDE:R", PROFILE]
+    expect: VALID_COMBINATION
+    why: "Side tracking shows the profile (definitional)."
+    evidence: ["SRC-004 cinlang:386"]
+  - id: C32
+    set: [STATIC, TRIPOD]
+    expect: VALID
+    why: "Locked on a tripod."
+    evidence: ["SRC-004 lexicon:148"]
+  - id: C33
+    set: [GROUNDLEVEL, LOWANGLE]
+    expect: VALID
+    why: "Ground camera looking up."
+    evidence: ["SRC-001 ref01:26-28"]
+  - id: C34
+    set: [GROUNDLEVEL, WORMSEYE]
+    expect: VALID
+    why: "From ground level looking straight up."
+    evidence: ["SRC-002 img-shots:261"]
+  - id: C35
+    set: [BIRDSEYE, DRONE]
+    expect: VALID
+    why: "A drone gives the bird's-eye height."
+    evidence: ["SRC-001 ref01:144"]
+  - id: C36
+    set: [DRONEVIEW, TOPDOWN]
+    expect: VALID
+    why: "Aerial straight-down view: TOPDOWN overrides DRONEVIEW's default oblique angle."
+    evidence: ["PRJ (research 07 D05)"]
+  - id: C37
+    set: [MACRO, ECU, SHALLOW]
+    expect: VALID
+    why: "Macro detail with a razor-thin focus plane."
+    evidence: ["SRC-002 camera:248", "SRC-004 cinlang:135"]
+  - id: C38
+    set: [INSERT, POV]
+    expect: VALID
+    why: "A point-of-view insert (what the character looks at)."
+    evidence: ["PRJ"]
+  - id: C39
+    set: [DEEPSTAGING, DEEPFOCUS]
+    expect: VALID
+    why: "Deep focus lets a scene be staged in depth."
+    evidence: ["SRC-004 cinlang:180-183"]
+  - id: C40
+    set: [FGLAYER, BGFOCUS]
+    expect: VALID
+    why: "Soft foreground obstruction, sharp background."
+    evidence: ["SRC-003 shotlang:40", "SRC-007 01 prompt:19"]
+  - id: C41
+    set: ["TRUCK:L", FGLAYER]
+    expect: VALID_COMBINATION
+    why: "Foreground passes faster than the background (parallax)."
+    evidence: ["SRC-004 lexicon:141", "SRC-001 ref01:134"]
+  - id: C42
+    set: [SLIDER, "TRUCK:R"]
+    expect: VALID_COMBINATION
+    why: "Slider movement."
+    evidence: ["SRC-001 ref01:134"]
+  - id: C43
+    set: [ORBIT, LOWANGLE]
+    expect: VALID_COMBINATION
+    why: "Hero orbit from a low angle."
+    evidence: ["SRC-001 SKILL:190"]
+  - id: C44
+    set: ["PAN:R", TRIPOD]
+    expect: VALID_COMBINATION
+    why: "A pan on a tripod head."
+    evidence: ["SRC-004 lexicon:142"]
+  - id: C45
+    set: ["WHIPPAN:R", HANDHELD]
+    expect: VALID_COMBINATION
+    why: "Action register."
+    evidence: ["SRC-001 SKILL:182"]
+  - id: C46
+    set: [OTS, SHALLOW]
+    expect: VALID
+    why: "Soft foreground shoulder, sharp subject."
+    evidence: ["SRC-004 cinlang:67"]
+  - id: C47
+    set: [EYELEVEL, DUTCH]
+    expect: VALID
+    why: "Roll is independent of height and pitch."
+    evidence: ["SRC-005 SKILL:95", "PRJ"]
+  - id: C48
+    set: ["ZOOMIN", "PAN:L"]
+    expect: VALID_COMBINATION
+    why: "Zoom while panning (documentary register)."
+    evidence: ["PRJ"]
+  - id: C49
+    set: [POV, HANDHELD]
+    expect: VALID
+    why: "A walking point of view."
+    evidence: ["SRC-002 camera:86"]
+  - id: C50
+    set: [STATIC, DRONE]
+    expect: VALID
+    why: "Hovering drone."
+    evidence: ["SRC-002 cinema:444"]
+  - id: C51
+    set: [FPV, POV]
+    expect: VALID
+    why: "A pilot's point of view from an FPV drone (FPV is the rig, POV the viewpoint)."
+    evidence: ["PRJ (research 04 section 2 FPV vs POV)"]
+  - id: C52
+    set: ["SCREEN:L2R", "TRACKSIDE:R"]
+    expect: VALID_COMBINATION
+    why: "Consistent screen direction."
+    evidence: ["SRC-004 cinlang:328-338"]
+  - id: C53
+    set: [BIRDSEYE, TOPDOWN]
+    expect: VALID
+    why: "BIRDSEYE refines TOPDOWN (merged)."
+    evidence: ["SRC-005 SKILL:121"]
+  - id: C54
+    set: [TRACK, FOLLOW]
+    expect: VALID
+    why: "FOLLOW refines TRACK (merged)."
+    evidence: ["SRC-001 ref01:115"]
+  - id: C55
+    set: [HANDHELD, SHOULDER]
+    expect: VALID
+    why: "SHOULDER refines HANDHELD (merged)."
+    evidence: ["SRC-001 ref01:71"]
+  - id: C56
+    set: [DRONE, FPV]
+    expect: VALID
+    why: "FPV refines DRONE (merged)."
+    evidence: ["SRC-001 SKILL:77"]
+  - id: C57
+    set: [MS, LOWANGLE, "DOLLYIN:SLOW", "LENS:50"]
+    expect: VALID
+    why: "Spec section 24 example."
+    evidence: ["spec section 24"]
+  - id: C58
+    set: [DRONE, GIMBAL]
+    expect: VALID
+    why: "Drone camera on a gimbal."
+    evidence: ["PRJ"]

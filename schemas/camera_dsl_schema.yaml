@@ -1,0 +1,534 @@
+# Structured Camera Schema — cinematic-director-camera-dsl (spec section 17)
+# PROJECT_DEFINED. Human guide: schemas/camera_dsl_schema.md. Real examples: schemas/examples.yaml.
+# Produced by scripts/camera_dsl.py (analyze -> build_state). scripts/audit.py (SCHEMA section) validates
+# every parser output it generates against this file, so the file and the code cannot drift apart.
+#
+# One entry per field path. Nested fields use dots; list items use [] (movement[].speed).
+#   type      enum | string | number | integer | boolean | object | list | map
+#             | enum_or_true (an enum value, or true = "yes, side unspecified")
+#             | number_or_enum (a number, or one of the enum values)
+#             | scalar (any string/number/boolean) | state | diagnostic (a whole sub-schema below)
+#   values    allowed values (enum types; for list/map: allowed item/value values)
+#   item_type type of list items (list only)
+#   pattern   regex a string must match
+#   nullable  null allowed (the dimension was not given)
+#   optional  the key may be absent (diagnostics only)
+#   default   value when no command sets it
+#   spec17    true = field required by spec section 17
+#   set_by    which commands write it (references/NN = the reference file with the rules)
+
+schema_version: "1.0.0"
+status: PROJECT_DEFINED
+patterns:
+  subject_id: "^[A-Z][A-Z0-9_]*$"
+  relation: "^[A-Z][A-Z0-9_]*>[A-Z][A-Z0-9_]*$"
+  axis: "^[A-Z][A-Z0-9_]*-[A-Z][A-Z0-9_]*$"
+
+# ---------------------------------------------------------------------------- parse result
+result:
+  input:
+    type: string
+    set_by: "the DSL text as given"
+  modes:
+    type: list
+    item_type: enum
+    values: [STRICT, DIRECTOR, VIDEO, IMAGE]
+    set_by: "MODE: keywords; STRICT and VIDEO when not overridden (spec sections 26-27)"
+  strict:
+    type: boolean
+    default: true
+  shots:
+    type: list
+    item_type: object
+  shots[].label:
+    type: string
+    pattern: "^S[0-9]+$"
+  shots[].continuous:
+    type: boolean
+    set_by: "the CONTINUOUS keyword (research/07 D37)"
+  shots[].segments:
+    type: list
+    item_type: object
+    set_by: "segment 0 = the whole shot; later segments come from time codes (0-3s:) or THEN"
+  shots[].segments[].index:
+    type: integer
+  shots[].segments[].t0:
+    type: number
+    nullable: true
+  shots[].segments[].t1:
+    type: number
+    nullable: true
+  shots[].segments[].global:
+    type: boolean
+  shots[].segments[].commands:
+    type: list
+    item_type: object
+  shots[].segments[].commands[].canonical:
+    type: string
+    pattern: "^[A-Z0-9]+$"
+    set_by: "a key of registry/canonical_commands.yaml"
+  shots[].segments[].commands[].raw:
+    type: string
+  shots[].segments[].commands[].via:
+    type: string
+  shots[].segments[].commands[].relationship:
+    type: enum
+    values: [canonical, compact_grammar, special_technique, abbreviation, semantic_alias, spelling_variant, parameter_alias, arg_dependent, rig_variant_alias, composite, legacy, legacy_ambiguous]
+  shots[].segments[].commands[].args:
+    type: map
+    set_by: "argument slots of registry meta.param_slots (a repeated slot is keyed slot#N)"
+  shots[].segments[].commands[].origin:
+    type: enum
+    values: [USER_SPECIFIED, STORYBOARD, DIRECTOR_SUGGESTED]
+    set_by: "intent layer (spec section 29): DSL and natural-language camera = USER_SPECIFIED"
+  shots[].free_text:
+    type: list
+    item_type: string
+    set_by: "text around the commands, kept but never turned into camera instructions"
+  shots[].state:
+    type: state
+  shots[].diagnostics:
+    type: list
+    item_type: diagnostic
+  shots[].status:
+    type: enum
+    values: [OK, WARN, ERROR]
+  diagnostics:
+    type: list
+    item_type: diagnostic
+    set_by: "cross-shot continuity checks C01-C10"
+  status:
+    type: enum
+    values: [OK, WARN, ERROR]
+
+# ---------------------------------------------------------------------------- lint record
+diagnostic:
+  rule:
+    type: string
+    set_by: "rule id from registry/conflict_matrix.yaml, the parser (A..), segment checks (R..), continuity (C..) or priority (P00)"
+  type:
+    type: enum
+    values: [HARD_CONFLICT, SOFT_CONFLICT, CONTEXT_DEPENDENT, SEQUENTIAL_ONLY, VALID_COMBINATION, SPECIAL_TECHNIQUE, VALID, VALID_SEQUENCE, OUT_OF_SCOPE, ERROR, WARNING, INFO]
+  commands:
+    type: list
+    item_type: string
+  message:
+    type: string
+  fix:
+    type: string
+    optional: true
+  evidence:
+    type: list
+    item_type: string
+    optional: true
+  shot:
+    type: string
+    optional: true
+  segment:
+    type: integer
+    optional: true
+
+# ---------------------------------------------------------------------------- camera state
+state:
+  shot:
+    type: object
+    spec17: true
+  shot.size:
+    type: enum
+    values: [EWS, WS, FS, MFS, COWBOY, MS, MCU, CU, ECU]
+    nullable: true
+    spec17: true
+    set_by: "SHOT_SIZE commands (references/01); without one, the START of a movement's size range"
+  shot.framing:
+    type: list
+    item_type: enum
+    values: [SINGLE, TWOSHOT, THREESHOT, GROUPSHOT, OTS, DIRTYOTS, CLEANOTS, POV, FRONTAL, THREEQUARTER, PROFILE, REAR]
+    spec17: true
+    set_by: "SUBJECT_FRAMING commands (references/02)"
+  shot.subject_count:
+    type: enum
+    values: ["1", "2", "3", GROUP]
+    nullable: true
+    spec17: true
+    set_by: "SINGLE, TWOSHOT, THREESHOT, GROUPSHOT"
+  shot.primary_subject:
+    type: string
+    pattern: "^[A-Z][A-Z0-9_]*$"
+    nullable: true
+    spec17: true
+    set_by: "OTS:A>B (B), SINGLE:A; else the first eyeline's looker; else the subject a tracking move follows"
+  shot.foreground_subject:
+    type: string
+    pattern: "^[A-Z][A-Z0-9_]*$"
+    nullable: true
+    spec17: true
+    set_by: "OTS:A>B (A, the shoulder in the foreground)"
+  shot.viewpoint:
+    type: enum
+    values: [OTS, POV]
+    nullable: true
+  shot.pov_owner:
+    type: string
+    pattern: "^[A-Z][A-Z0-9_]*$"
+    nullable: true
+    set_by: "POV:A"
+  shot.ots_variant:
+    type: enum
+    values: [DIRTY, CLEAN]
+    nullable: true
+  shot.orientation:
+    type: enum
+    values: [FRONTAL, THREEQUARTER, PROFILE, REAR]
+    nullable: true
+    set_by: "which side of the subject faces the camera (references/02)"
+  shot.function:
+    type: enum
+    values: [REACTION, INSERT, CUTAWAY]
+    nullable: true
+    set_by: "editorial role commands (references/13)"
+  shot.function_target:
+    type: string
+    pattern: "^[A-Z][A-Z0-9_]*$"
+    nullable: true
+
+  camera:
+    type: object
+    spec17: true
+  camera.position:
+    type: enum
+    values: [FAR_ABOVE, DRONE]
+    nullable: true
+    spec17: true
+    set_by: "BIRDSEYE (FAR_ABOVE), DRONEVIEW (DRONE)"
+  camera.height:
+    type: enum
+    values: [GROUND, ANKLE, KNEE, HIP, CHEST, SHOULDER, EYE, ELEVATED, AERIAL]
+    nullable: true
+    spec17: true
+    set_by: "CAMERA_HEIGHT commands (references/04); EYELEVEL; WORMSEYE defaults to GROUND"
+  camera.angle:
+    type: enum
+    values: [VERTICAL_UP, LOW, LEVEL, HIGH, VERTICAL_DOWN]
+    nullable: true
+    spec17: true
+    set_by: "CAMERA_ANGLE commands (references/03): the lens axis pitch"
+  camera.angle_intensity:
+    type: enum
+    values: [SLIGHT, STEEP]
+    nullable: true
+    set_by: "LOWANGLE:STEEP, HIGHANGLE:SLIGHT (MILD = SLIGHT, EXTREME = STEEP)"
+  camera.orientation:
+    type: enum
+    values: [LEVEL, DUTCH]
+    default: LEVEL
+    spec17: true
+    set_by: "DUTCH (a roll offset held for the whole shot, not a movement)"
+  camera.dutch:
+    type: object
+    nullable: true
+  camera.dutch.direction:
+    type: enum
+    values: [L, R]
+    nullable: true
+  camera.dutch.degrees:
+    type: number
+    nullable: true
+
+  movement:
+    type: list
+    item_type: object
+    spec17: true
+    set_by: "movement commands in time order (references/05, 06, 07, 10, 14)"
+  movement[].type:
+    type: enum
+    values: [pan, tilt, camera_roll, whip_pan, dolly_in, dolly_out, truck, pedestal, tracking_shot, follow_shot, leading_shot, side_tracking, orbit, crane, fly_through, dolly_zoom, fly_over, drone_reveal, zoom_in, zoom_out, crash_zoom, hold]
+    spec17: true
+    set_by: "canonical_name in the registry; hold = /STATIC inside a sequence segment (a still phase, research/07 D40)"
+  movement[].canonical:
+    type: enum
+    values: [PAN, TILT, ROLL, WHIPPAN, DOLLYIN, DOLLYOUT, TRUCK, PEDESTAL, TRACK, FOLLOW, LEAD, TRACKSIDE, ORBIT, CRANE, FLYTHROUGH, DOLLYZOOM, FLYOVER, DRONEREVEAL, ZOOMIN, ZOOMOUT, CRASHZOOM, STATIC]
+  movement[].direction:
+    type: enum
+    values: [L, R, UP, DOWN, IN, OUT, CW, CCW, BACK]
+    nullable: true
+    spec17: true
+    set_by: "camera-relative L/R; ORBIT CW/CCW is stored as L/R; ROLL keeps CW/CCW"
+  movement[].amount:
+    type: object
+    nullable: true
+    spec17: true
+  movement[].amount.value:
+    type: number_or_enum
+    values: [SMALL, MEDIUM, LARGE, PARTIAL, FULL]
+  movement[].amount.unit:
+    type: enum
+    values: [deg, "%", m, ""]
+  movement[].speed:
+    type: enum
+    values: [IMPERCEPTIBLE, VSLOW, SLOW, STEADY, BRISK, FAST]
+    nullable: true
+    spec17: true
+  movement[].duration:
+    type: number
+    nullable: true
+    spec17: true
+    set_by: "length of the time-coded segment in seconds"
+  movement[].time:
+    type: list
+    item_type: number
+    nullable: true
+  movement[].start_position:
+    type: enum
+    values: [EWS, WS, FS, MFS, COWBOY, MS, MCU, CU, ECU]
+    nullable: true
+    spec17: true
+    set_by: "size range START, else the shot size"
+  movement[].end_position:
+    type: enum
+    values: [EWS, WS, FS, MFS, COWBOY, MS, MCU, CU, ECU]
+    nullable: true
+    spec17: true
+    set_by: "size range END; never invented in STRICT mode"
+  movement[].target:
+    type: string
+    pattern: "^[A-Z][A-Z0-9_]*$"
+    nullable: true
+  movement[].origin:
+    type: enum
+    values: [USER_SPECIFIED, STORYBOARD, DIRECTOR_SUGGESTED]
+  movement[].sequential:
+    type: boolean
+  movement[].step:
+    type: integer
+    set_by: "segment index: 0 = the whole shot (simultaneous); 1, 2 ... = time-coded or THEN segments in order"
+
+  rig:
+    type: object
+    spec17: true
+  rig.type:
+    type: enum
+    values: [TRIPOD, HANDHELD, SHOULDER, STEADICAM, GIMBAL, SLIDER, DRONE, FPV]
+    nullable: true
+    spec17: true
+    set_by: "CAMERA_RIG commands (references/08); the more specific carrier wins (FPV over DRONE, anything over GIMBAL)"
+  rig.types:
+    type: list
+    item_type: enum
+    values: [TRIPOD, HANDHELD, SHOULDER, STEADICAM, GIMBAL, SLIDER, DRONE, FPV]
+  rig.stability:
+    type: enum
+    values: [LOCKED, HANDHELD, STABILIZED, AERIAL]
+    nullable: true
+    spec17: true
+  rig.intensity:
+    type: enum
+    values: [SUBTLE, STRONG]
+    nullable: true
+  rig.locked:
+    type: boolean
+    set_by: "STATIC"
+
+  lens:
+    type: object
+    spec17: true
+  lens.focal_length:
+    type: number
+    nullable: true
+    spec17: true
+    set_by: "LENS:50 or /LENS50 (mm, 35mm full-frame equivalent)"
+  lens.lens_type:
+    type: enum
+    values: [ULTRAWIDE, WIDE, NORMAL, PORTRAIT, TELE]
+    nullable: true
+    spec17: true
+    set_by: "lens class commands (references/09); a focal length implies its class"
+  lens.types:
+    type: list
+    item_type: enum
+    values: [MACRO, FISHEYE, ANAMORPHIC]
+
+  focus:
+    type: object
+    spec17: true
+  focus.target:
+    type: enum
+    values: [FG, MG, BG]
+    nullable: true
+    spec17: true
+  focus.depth_of_field:
+    type: enum
+    values: [SHALLOW, DEEP]
+    nullable: true
+    spec17: true
+  focus.transition:
+    type: object
+    nullable: true
+    spec17: true
+    set_by: "RACKFOCUS:A>B (a focus change, not a camera move)"
+  focus.transition.type:
+    type: enum
+    values: [RACK]
+  focus.transition.from:
+    type: string
+    pattern: "^[A-Z][A-Z0-9_]*$"
+    nullable: true
+  focus.transition.to:
+    type: string
+    pattern: "^[A-Z][A-Z0-9_]*$"
+    nullable: true
+  focus.transition.speed:
+    type: enum
+    values: [IMPERCEPTIBLE, VSLOW, SLOW, STEADY, BRISK, FAST]
+    nullable: true
+  focus.special:
+    type: enum
+    values: [SPLIT_DIOPTER]
+    nullable: true
+
+  composition:
+    type: object
+    spec17: true
+  composition.placement:
+    type: enum
+    values: [CENTER, THIRD, THIRD_L, THIRD_R]
+    nullable: true
+    spec17: true
+  composition.foreground:
+    type: string
+    nullable: true
+    spec17: true
+    set_by: "FGLAYER:LABEL (FOREGROUND_ELEMENT when no label)"
+  composition.midground:
+    type: string
+    nullable: true
+    spec17: true
+    set_by: "reserved: no v1 command writes it (scene content belongs to the prompt, not the camera)"
+  composition.background:
+    type: string
+    nullable: true
+    spec17: true
+    set_by: "reserved: no v1 command writes it"
+  composition.depth_layers:
+    type: boolean
+    spec17: true
+    set_by: "DEEPSTAGING"
+  composition.symmetry:
+    type: boolean
+  composition.negative_space:
+    type: enum_or_true
+    values: [L, R, UP, DOWN]
+    nullable: true
+  composition.headroom:
+    type: enum
+    values: [TIGHT, NORMAL, LOOSE]
+    nullable: true
+  composition.lookroom:
+    type: enum_or_true
+    values: [L, R]
+    nullable: true
+  composition.leading_lines:
+    type: boolean
+  composition.frame_in_frame:
+    type: boolean
+
+  continuity:
+    type: object
+    spec17: true
+  continuity.axis:
+    type: string
+    pattern: "^[A-Z][A-Z0-9_]*-[A-Z][A-Z0-9_]*$"
+    nullable: true
+    spec17: true
+    set_by: "AXIS:A-B (A screen-left, B screen-right)"
+  continuity.screen_direction:
+    type: enum
+    values: [L2R, R2L, TOWARD, AWAY]
+    nullable: true
+    spec17: true
+  continuity.eyeline:
+    type: list
+    item_type: string
+    pattern: "^[A-Z][A-Z0-9_]*>[A-Z][A-Z0-9_]*$"
+    spec17: true
+    set_by: "EYELINE:A>B, A>CAM, A>OFFL/OFFR/OFFUP/OFFDOWN; S>UNSPECIFIED when no relation"
+  continuity.relation_to_previous_shot:
+    type: list
+    item_type: object
+    spec17: true
+  continuity.relation_to_previous_shot[].type:
+    type: enum
+    values: [SRS, MATCHACTION, MATCHCUT]
+  continuity.relation_to_previous_shot[].value:
+    type: string
+    nullable: true
+  continuity.cross_axis:
+    type: enum
+    values: [MOVE, NEUTRAL, CUTAWAY, REESTABLISH, BLOCKING, UNSPECIFIED]
+    nullable: true
+  continuity.continuous:
+    type: boolean
+
+  style:
+    type: object
+    spec17: true
+  style.visual_style:
+    type: enum
+    values: [cinematic]
+    nullable: true
+    spec17: true
+    set_by: "CINEMATIC (a style word only; never adds lens, focus or movement)"
+
+  constraints:
+    type: object
+    spec17: true
+  constraints.preserve_story:
+    type: boolean
+    default: true
+  constraints.preserve_character:
+    type: boolean
+    default: true
+    spec17: true
+  constraints.preserve_clothing:
+    type: boolean
+    default: true
+    spec17: true
+  constraints.preserve_scene:
+    type: boolean
+    default: true
+    spec17: true
+  constraints.preserve_props:
+    type: boolean
+    default: true
+    spec17: true
+  constraints.preserve_action:
+    type: boolean
+    default: true
+    spec17: true
+
+  meta:
+    type: object
+  meta.origins:
+    type: map
+    values: [USER_SPECIFIED, STORYBOARD, DIRECTOR_SUGGESTED, DEFINITIONAL, INFERRED_FROM_EYELINE, INFERRED_FROM_MOVE]
+    set_by: "which intent layer set each field; DEFINITIONAL = implied by a command's definition"
+  meta.unspecified:
+    type: list
+    item_type: string
+    pattern: "^[A-Z]+[.](speed|amount|end_position|direction)$"
+    set_by: "movement parameters left to the model (STRICT mode never fills them)"
+  meta.definitional:
+    type: list
+    item_type: object
+  meta.definitional[].from:
+    type: string
+  meta.definitional[].dimension:
+    type: string
+  meta.definitional[].value:
+    type: scalar
+  meta.definitional[].source:
+    type: string
+    optional: true
+    set_by: "COMMAND_DEFINITION when the value is fixed by the command definition (CL-031); absent for registry defaults"
+  meta.label:
+    type: string
+    nullable: true

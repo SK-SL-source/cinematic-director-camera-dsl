@@ -1,0 +1,564 @@
+# Provenance Registry — where every command, grammar rule and validator rule comes from.
+# 'commands' is GENERATED from canonical_commands.yaml by `python scripts/audit.py --sync` (do not edit by hand).
+# 'grammar' and 'rules' are maintained here. Confidence levels: research/07 D27.
+# Source IDs: research/01_sources.md.
+
+grammar:
+  COMMAND_FORM:
+    rule: "/COMMAND, /COMMAND:ARG, /COMMAND:ARG:ARG[:ARG] (spec section 16)."
+    sources: []
+    confidence: PROJECT_DEFINED
+  TYPED_ARGUMENTS:
+    rule: "Arguments are assigned to a command's slots by type (direction, speed, amount, size range, relation, subject, label, mm), not by position."
+    sources: []
+    confidence: PROJECT_DEFINED
+  CAMERA_RELATIVE_LR:
+    rule: "Every L/R argument is camera-relative (= screen-relative)."
+    sources: []
+    confidence: PROJECT_DEFINED
+    note: "Sources mix subject-relative sides, camera sides and clockwise wording (research/04 section 2 ORBIT)."
+  ORBIT_DIRECTION_GRAMMAR:
+    rule: "/ORBIT:R:90 = 90 degrees toward camera-right = counterclockwise seen from above; CW/CCW accepted."
+    sources: []
+    confidence: PROJECT_DEFINED
+  SPEED_SCALE:
+    rule: "IMPERCEPTIBLE < VSLOW < SLOW < STEADY < BRISK < FAST (relative order only)."
+    sources: [SRC-004]
+    confidence: PROJECT_DEFINED
+    note: "The six levels and their intent come from SRC-004 lexicon:153-166; the tokens are project-defined."
+  AMOUNT_UNITS:
+    rule: "Amounts as 20% | 90 or 90DEG | 1M or 30CM | SMALL, MEDIUM, LARGE, PARTIAL, FULL."
+    sources: []
+    confidence: PROJECT_DEFINED
+  SIZE_RANGE:
+    rule: "Movement framing range START>END (e.g. /DOLLYIN:MS>MCU)."
+    sources: [LOCAL-002, SRC-009]
+    confidence: PROJECT_DEFINED
+    note: "Motivated by the measured rule 'state the start and end framing' (LOCAL-002 H3LAB-PUSH-01; SRC-009 framing.md)."
+  RELATION:
+    rule: "A>B for over-the-shoulder, eyelines, rack focus and reverses; FG/MG/BG, CAM, OFFL/OFFR/OFFUP/OFFDOWN as targets."
+    sources: []
+    confidence: PROJECT_DEFINED
+  AXIS_NOTATION:
+    rule: "/AXIS:A-B = A screen-left, B screen-right. '|' is never used (it breaks tables and shells)."
+    sources: []
+    confidence: PROJECT_DEFINED
+  SCREEN_TOKENS:
+    rule: "L2R | R2L | TOWARD | AWAY."
+    sources: []
+    confidence: PROJECT_DEFINED
+  COMPACT_LENS:
+    rule: "/LENS50 = /LENS:50; /35MM = /LENS:35."
+    sources: []
+    confidence: PROJECT_DEFINED
+    note: "The /LENS50 form appears in spec section 24."
+  SIMULTANEOUS:
+    rule: "Commands written together in one segment happen at the same time."
+    sources: []
+    confidence: PROJECT_DEFINED
+  THEN_SEQUENCE:
+    rule: "'THEN' separates sequential segments without times."
+    sources: []
+    confidence: PROJECT_DEFINED
+  TIMECODE_SEQUENCE:
+    rule: "'0-3s:' or '[0-3s]' opens a timed segment; text before the first time code applies to the whole shot."
+    sources: [SRC-001, SRC-002, SRC-004, SRC-008]
+    confidence: PROJECT_DEFINED
+    note: "Time-coded writing exists in the sources (SRC-001 SKILL:199-205, SRC-002 vocab:76-79, SRC-004 SKILL:261-273, SRC-008 base-en:86-92); the grammar is project-defined."
+  SHOT_LIST:
+    rule: "Lines starting 'S1:' (or 'SHOT 1:'), or the token CUT, separate shots; 'CONTINUOUS' marks a shot that must start where the previous one ended."
+    sources: []
+    confidence: PROJECT_DEFINED
+  MODE_KEYWORDS:
+    rule: "MODE:STRICT (default), MODE:DIRECTOR, MODE:IMAGE, MODE:VIDEO."
+    sources: []
+    confidence: PROJECT_DEFINED
+  ALIAS_ARGUMENTS:
+    rule: "Aliases may fix arguments (PANLEFT = PAN:L), depend on their argument (DOLLY:L = TRUCK:L) or expand to several commands."
+    sources: [SRC-002, SRC-003]
+    confidence: PROJECT_DEFINED
+    note: "The 'Dolly Left/Right' naming that makes DOLLY argument-dependent comes from SRC-002 camera:39-40 and SRC-003 shotlang:27."
+  TOKEN_BOUNDARIES:
+    rule: "A command starts at '/' not preceded by a letter, digit, '_' or '/'; arguments take only DSL characters (letters, digits, % > ° + - _, a dot only before a digit); full-width / : > next to DSL tokens are read as ASCII."
+    sources: []
+    confidence: PROJECT_DEFINED
+    note: "research/07 D38; lets Chinese text sit directly around commands (中景/MS，…) without swallowing punctuation."
+
+rules:
+  DIMENSION_MODEL:
+    rule: "Commands write dimensions; exclusive dimensions conflict, movement channels conflict only in opposite directions (research/07 D04)."
+    sources: [SRC-004, SRC-005]
+    confidence: PROJECT_DEFINED
+    note: "The grouping by what physically changes follows SRC-005 SKILL:88-109 and SRC-004 lexicon:134-151."
+  CORE_VS_DEFAULT:
+    rule: "Default values (e.g. DRONEVIEW's oblique angle) are overridden by explicit commands without a conflict (research/07 D05)."
+    sources: []
+    confidence: PROJECT_DEFINED
+  SIZE_LADDER:
+    rule: "Six rungs EWS 1, WS 2, MS 3, MCU 4, CU 5, ECU 6; FS, MFS, COWBOY count as WS."
+    sources: [SRC-004]
+    confidence: HIGH
+    note: "Six rungs from SRC-004 cinlang:36; placing COWBOY on the WS rung is project-defined."
+  STATIC_SIZE_IS_OPENING_FRAME:
+    rule: "A static size given with a framing-changing move is the opening frame (research/07 D09)."
+    sources: [LOCAL-002, SRC-009]
+    confidence: PROJECT_DEFINED
+    note: "Measured practice states the opening framing explicitly (LOCAL-002 H3LAB-PUSH-01; SRC-009 framing.md); making it the reading of a bare size is project-defined."
+  LENS_CLASS_RANGES:
+    rule: "ULTRAWIDE <=18, WIDE 18-35, NORMAL 35-70, PORTRAIT 70-110, TELE >=110 mm (35mm full-frame equivalent)."
+    sources: [SRC-004, SRC-003, SRC-001]
+    confidence: PROJECT_DEFINED
+    note: "Class boundaries are project-defined over the focal tables of SRC-004 cinlang:123-137 and SRC-003 llc:18-24."
+  MOTION_COUNT_POLICY:
+    rule: "1 move OK; 2 compatible moves VALID; 3+ SOFT_CONFLICT (warn, not block)."
+    sources: [SRC-002, SRC-004, SRC-009, SRC-010]
+    confidence: MEDIUM
+    note: "One dominant move: SRC-002 camera:297, SRC-004 SKILL:138; two compatible: SRC-002 camera:23; contradiction not count: SRC-009 camera-grammar:67."
+  SEQUENCE_IS_NOT_CONFLICT:
+    rule: "Commands in different time segments never conflict (VALID_SEQUENCE)."
+    sources: [SRC-002]
+    confidence: MEDIUM
+    note: "SRC-002 camera:182 separates sequenced from simultaneous combinations."
+  STRICT_MODE:
+    rule: "Only the given parameters are rendered; unspecified ones are listed, never invented (spec section 26)."
+    sources: []
+    confidence: PROJECT_DEFINED
+  INTENT_PRIORITY:
+    rule: "Explicit DSL > natural-language camera > storyboard > shot description > director suggestion > model default (spec section 29)."
+    sources: [SRC-010]
+    confidence: PROJECT_DEFINED
+    note: "SRC-010 root SKILL.md:75-89 uses a comparable authority order."
+  IMAGE_MODE_CONVERSION:
+    rule: "Movements become position, perspective, framing, implied motion and a moment within the move; no motion verbs (spec section 21)."
+    sources: [SRC-006, SRC-003, SRC-002, SRC-004]
+    confidence: MEDIUM
+  VIDEO_MODE_ELEMENTS:
+    rule: "Start, path, direction, speed, subject relation, parallax, end (spec section 22), only as given or definitional."
+    sources: [SRC-012, SRC-010, SRC-004]
+    confidence: MEDIUM
+    note: "SRC-012 SKILL:122 lists start frame, path, cue, speed, end frame, newly visible."
+  CONTINUITY_CHECKS:
+    rule: "Axis, eyeline, screen direction, 30-degree / two-step rule, POV needs a look, CONTINUOUS start = previous end, reverse keeps size."
+    sources: [SRC-004, SRC-002, SRC-010, DIR-08]
+    confidence: HIGH
+    note: "Rules from SRC-004 cinlang:239-376; DIR-08 and SRC-010 for from/to chaining."
+
+# ---- BEGIN GENERATED COMMANDS ----
+commands:
+  EWS:
+    category: SHOT_SIZE
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+  WS:
+    category: SHOT_SIZE
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+  FS:
+    category: SHOT_SIZE
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005]
+    confidence: HIGH
+  MFS:
+    category: SHOT_SIZE
+    sources: [SRC-002, SRC-004]
+    confidence: HIGH
+  COWBOY:
+    category: SHOT_SIZE
+    sources: [SRC-002]
+    confidence: LOW
+  MS:
+    category: SHOT_SIZE
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, LOCAL-002]
+    confidence: HIGH
+  MCU:
+    category: SHOT_SIZE
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, LOCAL-002]
+    confidence: HIGH
+  CU:
+    category: SHOT_SIZE
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-006, LOCAL-001]
+    confidence: HIGH
+  ECU:
+    category: SHOT_SIZE
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+  SINGLE:
+    category: SUBJECT_FRAMING
+    sources: [SRC-004]
+    confidence: LOW
+  TWOSHOT:
+    category: SUBJECT_FRAMING
+    sources: [SRC-002, SRC-004]
+    confidence: HIGH
+  THREESHOT:
+    category: SUBJECT_FRAMING
+    sources: [SRC-004]
+    confidence: LOW
+  GROUPSHOT:
+    category: SUBJECT_FRAMING
+    sources: [SRC-001, SRC-005]
+    confidence: LOW
+  OTS:
+    category: SUBJECT_FRAMING
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+  DIRTYOTS:
+    category: SUBJECT_FRAMING
+    sources: [SRC-004]
+    confidence: LOW
+  CLEANOTS:
+    category: SUBJECT_FRAMING
+    sources: [SRC-004]
+    confidence: LOW
+  POV:
+    category: SUBJECT_FRAMING
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005B, LOCAL-001]
+    confidence: HIGH
+  FRONTAL:
+    category: SUBJECT_FRAMING
+    sources: [SRC-004, SRC-001]
+    confidence: MEDIUM
+  THREEQUARTER:
+    category: SUBJECT_FRAMING
+    sources: [SRC-001, SRC-002, SRC-004, LOCAL-002]
+    confidence: HIGH
+  PROFILE:
+    category: SUBJECT_FRAMING
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+  REAR:
+    category: SUBJECT_FRAMING
+    sources: [SRC-002, SRC-003, SRC-004]
+    confidence: MEDIUM
+  EYELEVEL:
+    category: CAMERA_ANGLE
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-006]
+    confidence: HIGH
+  LOWANGLE:
+    category: CAMERA_ANGLE
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-006, SRC-007]
+    confidence: HIGH
+  HIGHANGLE:
+    category: CAMERA_ANGLE
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-007]
+    confidence: HIGH
+  TOPDOWN:
+    category: CAMERA_ANGLE
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: HIGH
+  BIRDSEYE:
+    category: CAMERA_ANGLE
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: MEDIUM
+  WORMSEYE:
+    category: CAMERA_ANGLE
+    sources: [SRC-001, SRC-002, SRC-005]
+    confidence: HIGH
+  DUTCH:
+    category: CAMERA_ANGLE
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-009]
+    confidence: HIGH
+  GROUNDLEVEL:
+    category: CAMERA_HEIGHT
+    sources: [SRC-002, SRC-004, SRC-005, SRC-001]
+    confidence: HIGH
+  ANKLELEVEL:
+    category: CAMERA_HEIGHT
+    sources: []
+    confidence: PROJECT_DEFINED
+  KNEELEVEL:
+    category: CAMERA_HEIGHT
+    sources: [SRC-004]
+    confidence: LOW
+  HIPLEVEL:
+    category: CAMERA_HEIGHT
+    sources: [SRC-001, SRC-004, SRC-005, SRC-006]
+    confidence: HIGH
+  CHESTLEVEL:
+    category: CAMERA_HEIGHT
+    sources: [SRC-004, LOCAL-002]
+    confidence: MEDIUM
+  SHOULDERLEVEL:
+    category: CAMERA_HEIGHT
+    sources: [SRC-001, SRC-003]
+    confidence: MEDIUM
+  ELEVATED:
+    category: CAMERA_HEIGHT
+    sources: [SRC-001, SRC-004]
+    confidence: HIGH
+  AERIAL:
+    category: CAMERA_HEIGHT
+    sources: [SRC-001, SRC-002, SRC-005]
+    confidence: HIGH
+  PAN:
+    category: CAMERA_ROTATION
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, LOCAL-001]
+    confidence: HIGH
+  TILT:
+    category: CAMERA_ROTATION
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, LOCAL-001]
+    confidence: HIGH
+  ROLL:
+    category: CAMERA_ROTATION
+    sources: [SRC-001, SRC-002, SRC-005, LOCAL-001]
+    confidence: HIGH
+  WHIPPAN:
+    category: CAMERA_ROTATION
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, SRC-009]
+    confidence: HIGH
+  DOLLYIN:
+    category: CAMERA_TRANSLATION
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-009, LOCAL-001, LOCAL-002]
+    confidence: HIGH
+  DOLLYOUT:
+    category: CAMERA_TRANSLATION
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-009, LOCAL-001]
+    confidence: HIGH
+  TRUCK:
+    category: CAMERA_TRANSLATION
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, LOCAL-001]
+    confidence: HIGH
+  PEDESTAL:
+    category: CAMERA_TRANSLATION
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, SRC-009, LOCAL-001]
+    confidence: HIGH
+  TRACK:
+    category: CAMERA_TRACKING
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, LOCAL-001, LOCAL-002]
+    confidence: HIGH
+  FOLLOW:
+    category: CAMERA_TRACKING
+    sources: [SRC-001, SRC-002, SRC-004, LOCAL-002]
+    confidence: HIGH
+  LEAD:
+    category: CAMERA_TRACKING
+    sources: [SRC-001, SRC-004]
+    confidence: MEDIUM
+  TRACKSIDE:
+    category: CAMERA_TRACKING
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: HIGH
+  ORBIT:
+    category: CAMERA_TRACKING
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-009, LOCAL-001]
+    confidence: HIGH
+  CRANE:
+    category: COMPLEX_MOVEMENT
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-007, SRC-009]
+    confidence: HIGH
+  FLYTHROUGH:
+    category: COMPLEX_MOVEMENT
+    sources: [SRC-001, SRC-002, SRC-007]
+    confidence: HIGH
+  DOLLYZOOM:
+    category: COMPLEX_MOVEMENT
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, SRC-009]
+    confidence: HIGH
+  DRONEVIEW:
+    category: AERIAL
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: MEDIUM
+  FLYOVER:
+    category: AERIAL
+    sources: [SRC-001, SRC-002]
+    confidence: MEDIUM
+  DRONEREVEAL:
+    category: AERIAL
+    sources: [SRC-001, SRC-002, SRC-003, SRC-009]
+    confidence: MEDIUM
+  STATIC:
+    category: CAMERA_RIG
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-005B, LOCAL-001, LOCAL-002]
+    confidence: HIGH
+  TRIPOD:
+    category: CAMERA_RIG
+    sources: [SRC-004, SRC-002]
+    confidence: MEDIUM
+  HANDHELD:
+    category: CAMERA_RIG
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-009, LOCAL-001]
+    confidence: HIGH
+  SHOULDER:
+    category: CAMERA_RIG
+    sources: [SRC-001]
+    confidence: LOW
+  STEADICAM:
+    category: CAMERA_RIG
+    sources: [SRC-001, SRC-004]
+    confidence: MEDIUM
+  GIMBAL:
+    category: CAMERA_RIG
+    sources: [SRC-001, SRC-004]
+    confidence: MEDIUM
+  SLIDER:
+    category: CAMERA_RIG
+    sources: [SRC-001, SRC-004]
+    confidence: MEDIUM
+  DRONE:
+    category: CAMERA_RIG
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+  FPV:
+    category: CAMERA_RIG
+    sources: [SRC-001, SRC-002, SRC-007]
+    confidence: HIGH
+  LENS:
+    category: LENS
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-006]
+    confidence: HIGH
+  ULTRAWIDE:
+    category: LENS
+    sources: [SRC-003, SRC-004]
+    confidence: HIGH
+  WIDEANGLE:
+    category: LENS
+    sources: [SRC-001, SRC-003, SRC-004, SRC-006]
+    confidence: HIGH
+  NORMAL:
+    category: LENS
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+  PORTRAITLENS:
+    category: LENS
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-006]
+    confidence: HIGH
+  TELEPHOTO:
+    category: LENS
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+  MACRO:
+    category: LENS
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+  FISHEYE:
+    category: LENS
+    sources: [SRC-001, SRC-002]
+    confidence: HIGH
+  ANAMORPHIC:
+    category: LENS
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: HIGH
+  ZOOMIN:
+    category: ZOOM
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, SRC-009, LOCAL-001]
+    confidence: HIGH
+  ZOOMOUT:
+    category: ZOOM
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005, SRC-009, LOCAL-001]
+    confidence: HIGH
+  CRASHZOOM:
+    category: ZOOM
+    sources: [SRC-001, SRC-002, SRC-009]
+    confidence: HIGH
+  SHALLOW:
+    category: FOCUS
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-006]
+    confidence: HIGH
+  DEEPFOCUS:
+    category: FOCUS
+    sources: [SRC-001, SRC-003, SRC-004, SRC-005]
+    confidence: HIGH
+  RACKFOCUS:
+    category: FOCUS
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004, SRC-005, SRC-007, SRC-009]
+    confidence: HIGH
+  FGFOCUS:
+    category: FOCUS
+    sources: [SRC-004, SRC-005, SRC-006, SRC-007]
+    confidence: MEDIUM
+  MGFOCUS:
+    category: FOCUS
+    sources: [SRC-004, SRC-005, SRC-006]
+    confidence: MEDIUM
+  BGFOCUS:
+    category: FOCUS
+    sources: [SRC-004, SRC-005, SRC-006]
+    confidence: MEDIUM
+  SPLITDIOPTER:
+    category: FOCUS
+    sources: [SRC-001, SRC-004]
+    confidence: HIGH
+  CENTER:
+    category: COMPOSITION
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+  THIRDS:
+    category: COMPOSITION
+    sources: [SRC-001, SRC-003, SRC-004, SRC-005, SRC-006]
+    confidence: HIGH
+  SYMMETRY:
+    category: COMPOSITION
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+  NEGSPACE:
+    category: COMPOSITION
+    sources: [SRC-001, SRC-002, SRC-003, SRC-004]
+    confidence: HIGH
+  HEADROOM:
+    category: COMPOSITION
+    sources: [SRC-001, SRC-004, SRC-005]
+    confidence: HIGH
+  LOOKROOM:
+    category: COMPOSITION
+    sources: [SRC-001, SRC-004]
+    confidence: HIGH
+  LEADLINES:
+    category: COMPOSITION
+    sources: [SRC-001, SRC-003, SRC-004, SRC-005]
+    confidence: HIGH
+  FRAMEINFRAME:
+    category: COMPOSITION
+    sources: [SRC-001, SRC-003, SRC-004]
+    confidence: HIGH
+  FGLAYER:
+    category: COMPOSITION
+    sources: [SRC-001, SRC-003, SRC-004, SRC-005]
+    confidence: HIGH
+  DEEPSTAGING:
+    category: COMPOSITION
+    sources: [SRC-004, SRC-005]
+    confidence: MEDIUM
+  AXIS:
+    category: CONTINUITY
+    sources: [SRC-002, SRC-004]
+    confidence: HIGH
+  CROSSAXIS:
+    category: CONTINUITY
+    sources: [SRC-004, SRC-002]
+    confidence: MEDIUM
+  EYELINE:
+    category: CONTINUITY
+    sources: [SRC-004, SRC-006, LOCAL-002]
+    confidence: HIGH
+  SCREEN:
+    category: CONTINUITY
+    sources: [SRC-002, SRC-004, SRC-005B]
+    confidence: HIGH
+  SRS:
+    category: CONTINUITY
+    sources: [SRC-002, SRC-004]
+    confidence: HIGH
+  MATCHACTION:
+    category: CONTINUITY
+    sources: [SRC-002, SRC-004]
+    confidence: HIGH
+  MATCHCUT:
+    category: CONTINUITY
+    sources: [SRC-002, SRC-004, SRC-007]
+    confidence: HIGH
+  REACTION:
+    category: CONTINUITY
+    sources: [SRC-001, SRC-002, SRC-004, SRC-005]
+    confidence: HIGH
+  INSERT:
+    category: CONTINUITY
+    sources: [SRC-002, SRC-004, SRC-005B]
+    confidence: HIGH
+  CUTAWAY:
+    category: CONTINUITY
+    sources: [SRC-004, SRC-005B]
+    confidence: HIGH
+  CINEMATIC:
+    category: STYLE
+    sources: [SRC-003, SRC-004, SRC-005, LOCAL-001]
+    confidence: MEDIUM
+# ---- END GENERATED COMMANDS ----

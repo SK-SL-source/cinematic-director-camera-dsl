@@ -1,0 +1,3 @@
+# Store and check out every file byte for byte: no line-ending conversion on any system.
+# The audit fingerprints files by their bytes (BASELINE_V2.md), so a converted checkout would not match.
+* -text

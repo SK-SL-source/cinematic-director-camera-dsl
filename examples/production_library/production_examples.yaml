@@ -1,0 +1,866 @@
+# Production Example Library: everyday filmmaking situations mapped to candidate Camera DSL.
+# An example / retrieval layer, not a camera-language authority: registry/canonical_commands.yaml defines every command,
+# and scripts/example_library.py checks every candidate with the parser and the conflict rules before it returns it.
+# Field definitions: schema.yaml. Human-readable lists: narrative_30.md and technique_36.md (python scripts/example_library.py docs).
+library_version: "1.0"
+examples:
+  - id: "EX-001"
+    title_zh: "開場全景推近"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "35mm 廣角全景開場，女主立於仙山懸崖，鏡頭緩慢向前推近，最後聚焦側臉與花瓣。"
+    camera_dsl: ["/WS", "/LENS:35", "/DOLLYIN:WS>CU:SLOW", "/SHALLOW"]
+    camera_semantics: ["Dolly In 是攝影機實體前移，焦距不變；不是 Zoom In。"]
+    non_camera:
+      lighting: ["丁達爾光"]
+      fx: ["雲霧", "飄落花瓣"]
+      style: ["古風國漫 CG"]
+    tags: ["推近", "推鏡", "開場", "全景", "dolly_in", "opening", "reveal"]
+  - id: "EX-002"
+    title_zh: "情緒特寫推鏡"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "85mm 長焦，女主含淚，從中景緩慢推至眼部極特寫。"
+    camera_dsl: ["/MS", "/LENS:85", "/DOLLYIN:MS>ECU:SLOW", "/SHALLOW"]
+    camera_semantics: ["Dolly In 是攝影機實體前移，不是 Zoom In。", "85mm 在 registry 屬於人像鏡頭的範圍（PORTRAITLENS，約 85 到 105mm）。"]
+    non_camera:
+      temporal: ["慢動作"]
+      action: ["女主含淚", "眼尾泛紅", "睫毛輕顫"]
+      fx: ["瞳孔倒影", "暖金色散景"]
+    tags: ["推近", "推鏡", "特寫", "情緒", "眼部", "dolly_in", "close_up", "emotion"]
+    build_notes: ["拿掉 /TELEPHOTO：驗證器回報 R03-LENS-CLASS-RANGE，85mm 不在 TELE 的範圍（110mm 以上）；保留案例寫明的焦距 /LENS:85。"]
+  - id: "EX-003"
+    title_zh: "施法蓄力推鏡"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "50mm 中景，男主結印，鏡頭從全身推近到手部法印特寫。"
+    camera_dsl: ["/FS", "/LENS:50", "/DOLLYIN:FS>ECU:SLOW"]
+    camera_semantics: ["攝影機實體前移，從全身推到手部極特寫。"]
+    non_camera:
+      action: ["男主抬手結印"]
+      fx: ["金色法陣", "指縫溢出的金光"]
+      color: ["暗藍色星空"]
+    tags: ["推近", "推鏡", "施法", "手部特寫", "dolly_in", "magic", "insert"]
+  - id: "EX-004"
+    title_zh: "轉身拉遠揭示場景"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "女主猛然回眸，鏡頭快速後退，揭示整片桃林。"
+    camera_dsl: ["/LENS:50", "/DOLLYOUT:MCU>WS:FAST"]
+    camera_semantics: ["Dolly Out 是攝影機實體後退，不是 Zoom Out。"]
+    non_camera:
+      action: ["女主猛然轉身回眸"]
+      fx: ["紅色花瓣", "桃林"]
+      color: ["暖粉轉冷藍"]
+    tags: ["拉遠", "拉鏡", "揭示", "回眸", "dolly_out", "reveal"]
+  - id: "EX-005"
+    title_zh: "飛升拉鏡"
+    batch: "NARRATIVE_30"
+    mapping_class: "COMPOSITE"
+    natural_language_intent_zh: "男主背對鏡頭站在懸崖，鏡頭一邊後退、一邊升高，揭示雲海與仙山宮殿。"
+    camera_dsl: ["/REAR", "/LENS:24", "/DOLLYOUT:SLOW", "/PEDESTAL:UP:SLOW"]
+    camera_semantics: ["後退和升高同時進行，攝影機朝向不變。"]
+    non_camera:
+      fx: ["金色光環", "雲海", "仙山宮殿"]
+    tags: ["飛升", "拉鏡", "拉遠", "升鏡", "揭示", "dolly_out", "pedestal_up", "reveal"]
+    build_notes: ["拿掉 /ULTRAWIDE：驗證器回報 R03-LENS-CLASS-RANGE，24mm 不在 ULTRAWIDE 的範圍（18mm 以下）；保留 /LENS:24，registry 把它歸為廣角。"]
+  - id: "EX-006"
+    title_zh: "戰鬥結束拉遠"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "女主收劍而立，鏡頭緩慢後退，逐漸露出身後戰場。"
+    camera_dsl: ["/MS", "/LENS:35", "/DOLLYOUT:MS>WS:SLOW"]
+    camera_semantics: ["Dolly Out 是攝影機實體後退。"]
+    non_camera:
+      action: ["女主收劍而立"]
+      fx: ["倒下的魔族大軍", "燃燒的戰場", "煙塵"]
+      style: ["悲壯"]
+    tags: ["拉遠", "拉鏡", "戰鬥", "揭示", "dolly_out", "reveal"]
+  - id: "EX-007"
+    title_zh: "環境橫搖"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "24mm 超廣角，從庭院左側紅梅石桌橫搖到右側倚窗讀書的白衣男子。"
+    camera_dsl: ["/LENS:24", "/PAN:R:SLOW"]
+    camera_semantics: ["Pan 是攝影機原地轉動，不是 Truck 側移。"]
+    non_camera:
+      fx: ["紅梅", "煮茶青煙", "漫天飛雪"]
+      style: ["古風暖調"]
+    tags: ["橫搖", "搖鏡", "環境", "pan", "establishing"]
+    build_notes: ["拿掉 /ULTRAWIDE，理由同 EX-005；保留 /LENS:24。"]
+  - id: "EX-008"
+    title_zh: "對峙橫搖"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "50mm 中景，從左側持劍男主橫搖到右側持鞭女主。"
+    camera_dsl: ["/MS", "/LENS:50", "/PAN:R:SLOW"]
+    camera_semantics: ["Pan 是攝影機原地轉動。"]
+    non_camera:
+      fx: ["空氣波紋"]
+      style: ["灰濛濛的天空與枯樹林"]
+    tags: ["對峙", "橫搖", "搖鏡", "pan", "standoff"]
+  - id: "EX-009"
+    title_zh: "戰場全景橫搖"
+    batch: "NARRATIVE_30"
+    mapping_class: "COMPOSITE"
+    natural_language_intent_zh: "24mm 超廣角低角度橫搖掃過戰場，帶輕微手持感。"
+    camera_dsl: ["/WS", "/LENS:24", "/LOWANGLE", "/PAN:R", "/HANDHELD"]
+    camera_semantics: ["/HANDHELD 是器材與晃動質感，不是方向。"]
+    non_camera:
+      fx: ["魔族士兵", "燃燒戰旗", "衝鋒異獸", "城堡火焰"]
+      color: ["暖橙色調"]
+    tags: ["戰場", "橫搖", "搖鏡", "手持", "pan", "handheld", "battle"]
+    build_notes: ["拿掉 /ULTRAWIDE，理由同 EX-005；保留 /LENS:24。"]
+  - id: "EX-010"
+    title_zh: "跟隨行走移鏡"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "35mm 跟拍，女主沿古街青石板路行走，攝影機與她平行移動。"
+    camera_dsl: ["/LENS:35", "/TRACKSIDE"]
+    camera_semantics: ["Trackside 是攝影機在人物側面同步移動；方向沒寫時由模型決定，會有警告。"]
+    non_camera:
+      action: ["女主沿古街青石板路行走"]
+    tags: ["跟拍", "移鏡", "行走", "側面跟拍", "trackside", "walk"]
+  - id: "EX-011"
+    title_zh: "奔跑追逐移鏡"
+    batch: "NARRATIVE_30"
+    mapping_class: "COMPOSITE"
+    natural_language_intent_zh: "24mm 手持感，鏡頭在女主前方倒退，女主從後方奔跑追趕。"
+    camera_dsl: ["/LENS:24", "/WIDEANGLE", "/LEAD", "/HANDHELD"]
+    camera_semantics: ["Lead 是攝影機在人物前方倒退跟拍。"]
+    non_camera:
+      action: ["女主奔跑追趕"]
+      fx: ["動態模糊"]
+      color: ["冷青調"]
+    tags: ["奔跑", "追逐", "倒退跟拍", "手持", "lead", "handheld", "chase"]
+  - id: "EX-012"
+    title_zh: "並肩而行移鏡"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "50mm，男女主並肩行走，鏡頭與兩人同速側移。"
+    camera_dsl: ["/TWOSHOT", "/LENS:50", "/TRACKSIDE"]
+    camera_semantics: ["攝影機在兩人側面同速移動。"]
+    non_camera:
+      action: ["男女主並肩行走"]
+      lighting: ["月光"]
+      style: ["竹林小徑"]
+    tags: ["並肩", "雙人", "側面跟拍", "移鏡", "trackside", "two_shot"]
+  - id: "EX-013"
+    title_zh: "高空俯拍下降"
+    batch: "NARRATIVE_30"
+    mapping_class: "COMPOSITE"
+    natural_language_intent_zh: "從高空俯視，鏡頭緩慢下降穿過雲層，逐漸露出下方法陣。"
+    camera_dsl: ["/AERIAL", "/HIGHANGLE", "/PEDESTAL:DOWN:SLOW"]
+    alternatives:
+      - dsl: "/AERIAL /HIGHANGLE /CRANE:DOWN:SLOW"
+        when_zh: "下降的路線是大型弧線"
+      - dsl: "/DRONE /HIGHANGLE /PEDESTAL:DOWN:SLOW"
+        when_zh: "用無人機下降"
+    camera_semantics: ["Pedestal Down 是整台攝影機垂直下降，朝向不變。"]
+    non_camera:
+      action: ["白衣神女立於法陣中央", "弟子跪拜"]
+      fx: ["雲層", "圓形法陣", "金色光芒"]
+    ambiguity: ["若實際是大型弧線或無人機下降，改用 alternatives 裡的組合。"]
+    tags: ["俯拍", "下降", "降鏡", "高空", "pedestal_down", "aerial"]
+  - id: "EX-014"
+    title_zh: "仰拍上升"
+    batch: "NARRATIVE_30"
+    mapping_class: "AMBIGUOUS"
+    natural_language_intent_zh: "低角度仰拍，鏡頭緩慢向上「搖升」。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/LOWANGLE /TILT:UP:SLOW"
+        when_zh: "只有鏡頭往上轉，攝影機不升高"
+      - dsl: "/LOWANGLE /TILT:UP:SLOW /PEDESTAL:UP:SLOW"
+        when_zh: "攝影機本體也一起升高"
+    question_zh: "只是鏡頭往上轉，還是攝影機本體也升高？"
+    camera_semantics: ["Tilt 是攝影機原地上下轉動；Pedestal 是整台攝影機升高。"]
+    non_camera:
+      fx: ["劍氣", "翻湧的烏雲", "閃電"]
+      color: ["暗黑色調"]
+    ambiguity: ["「搖升」可能只是上搖，也可能是上搖加升高。"]
+    tags: ["仰拍", "上升", "搖升", "tilt_up", "pedestal_up"]
+  - id: "EX-015"
+    title_zh: "升起揭示"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "從水面倒影特寫開始，鏡頭垂直升高，逐漸揭示女主、荷花池、湖心亭與滿月。"
+    camera_dsl: ["/CU", "/PEDESTAL:UP:SLOW"]
+    camera_semantics: ["Pedestal Up 是整台攝影機垂直升高，朝向不變；不是 Tilt Up。"]
+    non_camera:
+      fx: ["水面倒映星空", "荷花池", "湖心亭", "滿月"]
+      color: ["冷藍銀色調"]
+    tags: ["升起", "升鏡", "揭示", "pedestal_up", "reveal"]
+  - id: "EX-016"
+    title_zh: "手部交握特寫"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "100mm 微距特寫，兩人交握的手，紅色絲帶纏在手腕。"
+    camera_dsl: ["/ECU", "/LENS:100", "/MACRO", "/SHALLOW"]
+    camera_semantics: ["本案例不需要運鏡。"]
+    non_camera:
+      action: ["兩手緩緩交握", "指尖微顫"]
+      fx: ["紅色絲帶", "暖紅色光斑"]
+    tags: ["特寫", "手部", "微距", "macro", "insert"]
+  - id: "EX-017"
+    title_zh: "眼部大特寫"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "85mm 長焦大特寫，女主閉眼後緩緩睜眼並落淚。"
+    camera_dsl: ["/ECU", "/LENS:85", "/SHALLOW"]
+    camera_semantics: ["沒有運鏡；85mm 在 registry 屬於人像鏡頭的範圍（PORTRAITLENS）。"]
+    non_camera:
+      temporal: ["慢動作"]
+      action: ["閉眼後睜眼落淚"]
+      fx: ["瞳孔倒映飛花", "淚珠"]
+    tags: ["大特寫", "特寫", "眼部", "睜眼", "close_up", "emotion"]
+    build_notes: ["拿掉 /TELEPHOTO，理由同 EX-002；保留 /LENS:85。"]
+  - id: "EX-018"
+    title_zh: "物品特寫環繞"
+    batch: "NARRATIVE_30"
+    mapping_class: "COMPOSITE"
+    natural_language_intent_zh: "100mm 微距特寫，一支斷裂玉簪落在青石板上，鏡頭緩慢環繞半圈。"
+    camera_dsl: ["/ECU", "/LENS:100", "/MACRO", "/ORBIT:R:180:SLOW"]
+    camera_semantics: ["Orbit 是攝影機繞著物件走，物件不動。"]
+    non_camera:
+      fx: ["斷裂的玉簪", "暈開的血跡", "飄落的花瓣"]
+      color: ["冷灰調"]
+    tags: ["物品特寫", "環繞", "半圈", "orbit", "macro", "insert"]
+  - id: "EX-019"
+    title_zh: "施法 360° 環繞"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "以女主為中心，攝影機緩慢繞行 360°。"
+    camera_dsl: ["/ORBIT:R:360:SLOW"]
+    camera_semantics: ["攝影機繞人物走，不是人物自己旋轉。"]
+    non_camera:
+      action: ["女主閉目結印"]
+      fx: ["藍色水元素漩渦"]
+      color: ["藍金色調"]
+    tags: ["環繞", "360", "施法", "orbit"]
+  - id: "EX-020"
+    title_zh: "擁抱半圈環繞"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "35mm 雙人擁抱鏡頭，攝影機緩慢環繞半圈。"
+    camera_dsl: ["/TWOSHOT", "/LENS:35", "/ORBIT:R:180:SLOW", "/SHALLOW"]
+    camera_semantics: ["攝影機繞著兩人走，兩人不轉。"]
+    non_camera:
+      action: ["男主擁女主入懷", "女主埋在肩頭哭泣"]
+      fx: ["花瓣飄落", "暖光光斑"]
+    tags: ["擁抱", "雙人", "環繞", "半圈", "orbit", "two_shot"]
+  - id: "EX-021"
+    title_zh: "覺醒快速旋轉"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT_PLUS_FX"
+    natural_language_intent_zh: "從女主正面開始，攝影機快速環繞半圈，同時發生覺醒變身。"
+    camera_dsl: ["/FRONTAL", "/ORBIT:R:180:FAST"]
+    camera_semantics: ["攝影機繞人物走；變身效果不屬於運鏡。"]
+    non_camera:
+      fx: ["黑髮轉銀髮", "棕瞳轉金瞳", "粉衣轉白衣", "能量衝擊波"]
+    tags: ["覺醒", "變身", "環繞", "旋轉", "orbit", "transformation"]
+  - id: "EX-022"
+    title_zh: "時間凝滯回眸"
+    batch: "NARRATIVE_30"
+    mapping_class: "CAMERA_PLUS_TEMPORAL"
+    natural_language_intent_zh: "時間凝滯，花瓣與雪花懸停，攝影機從女主側面緩慢環繞。"
+    camera_dsl: ["/ORBIT:R:SLOW"]
+    camera_semantics: ["只有攝影機在動；時間凝滯是時間效果，不是運鏡。"]
+    non_camera:
+      temporal: ["FREEZE_TIME"]
+      action: ["女主緩緩回眸"]
+      fx: ["花瓣懸停", "雪花懸停", "髮絲與衣擺定格"]
+    tags: ["時間凝滯", "回眸", "環繞", "freeze", "orbit"]
+  - id: "EX-023"
+    title_zh: "慢動作擋劍"
+    batch: "NARRATIVE_30"
+    mapping_class: "NON_CAMERA"
+    natural_language_intent_zh: "男主替女主擋劍，時間降到 1/4 速度。"
+    camera_dsl: []
+    camera_semantics: ["原始情境沒有指定運鏡，不自動補。"]
+    non_camera:
+      temporal: ["SLOW_MOTION_0.25X"]
+      action: ["男主側身擋劍", "女主驚呼"]
+      fx: ["鮮血飛濺"]
+    tags: ["慢動作", "擋劍", "slow_motion"]
+  - id: "EX-024"
+    title_zh: "慢動作落崖"
+    batch: "NARRATIVE_30"
+    mapping_class: "CAMERA_STATE_PLUS_TEMPORAL"
+    natural_language_intent_zh: "慢鏡頭俯拍，女主從懸崖墜落。"
+    camera_dsl: ["/HIGHANGLE"]
+    camera_semantics: ["俯拍是機位角度，沒有運鏡；慢動作是時間效果。"]
+    non_camera:
+      temporal: ["SLOW_MOTION"]
+      action: ["女主墜崖", "伸手", "與男主指尖錯過"]
+    tags: ["慢動作", "俯拍", "落崖", "high_angle", "slow_motion"]
+  - id: "EX-025"
+    title_zh: "回憶閃回・虛實疊化"
+    batch: "NARRATIVE_30"
+    mapping_class: "NON_CAMERA_EDITING"
+    natural_language_intent_zh: "現實畫面逐漸虛化並疊入三段回憶，最後回到女主流淚特寫。"
+    camera_dsl: ["/CU"]
+    camera_semantics: ["/CU 只用於最後回到現實的特寫；疊化和閃回是剪輯，不是運鏡。"]
+    non_camera:
+      editing: ["DISSOLVE", "FLASHBACK_01", "FLASHBACK_02", "FLASHBACK_03", "RETURN_TO_PRESENT"]
+      action: ["女主流淚"]
+      color: ["暖黃漸冷"]
+    tags: ["回憶", "閃回", "疊化", "flashback", "dissolve"]
+  - id: "EX-026"
+    title_zh: "夢境扭曲"
+    batch: "NARRATIVE_30"
+    mapping_class: "NON_CAMERA_FX"
+    natural_language_intent_zh: "夢境般的畫面緩慢扭曲晃動，場景變形，遠處身影模糊消散。"
+    camera_dsl: []
+    alternatives:
+      - dsl: "/HANDHELD"
+        when_zh: "只要自然的攝影機晃動時另外加上；它不等於夢境扭曲"
+    camera_semantics: ["夢境扭曲是畫面效果，不是運鏡。"]
+    non_camera:
+      fx: ["DREAM_DISTORTION", "WARP", "ENVIRONMENT_DEFORMATION", "SUBJECT_DISSOLVE"]
+      color: ["冷白偏藍"]
+    ambiguity: ["若只需自然的攝影機晃動，可另外加 /HANDHELD；不會自動加上。"]
+    tags: ["夢境", "扭曲", "dream", "warp"]
+  - id: "EX-027"
+    title_zh: "對峙正反打"
+    batch: "NARRATIVE_30"
+    mapping_class: "MULTI_SHOT"
+    natural_language_intent_zh: "男主冷酷側臉與女主含淚雙眼交替，最後兩人對視。"
+    camera_dsl: []
+    shots:
+      - label: "S1"
+        role_zh: "男主冷酷側臉"
+        dsl: "/CU /AXIS:A-B"
+      - label: "S2"
+        role_zh: "女主含淚雙眼，反打"
+        dsl: "/CU /SRS:A>B"
+      - label: "S3"
+        role_zh: "兩人對視"
+        dsl: "/TWOSHOT /AXIS:A-B"
+    camera_semantics: ["/SRS:A>B 標在反打的那一鏡；/AXIS:A-B 讓整場維持同一條軸線。"]
+    non_camera:
+      editing: ["正反打交替，節奏逐漸加快", "最後定格在兩人對視"]
+      color: ["冷色調"]
+    tags: ["正反打", "對峙", "對視", "shot_reverse_shot", "srs", "axis"]
+    build_notes: ["/SRS 從第一鏡移到反打的第二鏡，寫成 /SRS:A>B：這個指令表示「這一鏡是上一鏡的反打」，放在第一鏡沒有上一鏡（C10-NO-PREVIOUS-SHOT）。驗證器對 CU 接 CU 仍給 C05-JUMP-CUT-RISK 警告，保留。"]
+  - id: "EX-028"
+    title_zh: "黑屏轉場・睜眼"
+    batch: "NARRATIVE_30"
+    mapping_class: "AMBIGUOUS"
+    natural_language_intent_zh: "黑屏 2 秒後，從女主瞳孔極特寫「拉出」，揭示她在床上猛然坐起。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/DOLLYOUT:ECU>MS"
+        when_zh: "攝影機本體往後退"
+      - dsl: "/ZOOMOUT:ECU>MS"
+        when_zh: "攝影機不動，只把焦距拉遠"
+    question_zh: "攝影機本體要向後移動，還是只改變焦距？"
+    camera_semantics: ["Dolly Out 是攝影機後退；Zoom Out 只改焦距。"]
+    non_camera:
+      editing: ["BLACK_SCREEN_2S"]
+      action: ["女主在床上猛然坐起", "喘息"]
+      lighting: ["深夜月光"]
+      color: ["冷藍暗調"]
+    ambiguity: ["「拉出」沒有說明攝影機本體是否移動。"]
+    tags: ["拉出", "黑屏", "睜眼", "轉場", "dolly_out", "zoom_out"]
+  - id: "EX-029"
+    title_zh: "穿越・光速穿梭"
+    batch: "NARRATIVE_30"
+    mapping_class: "DIRECT_PLUS_FX"
+    natural_language_intent_zh: "鏡頭高速向前穿過金色光門，從仙門穿越到凡間市集。"
+    camera_dsl: ["/FLYTHROUGH:LIGHT_GATE:FAST"]
+    camera_semantics: ["Fly-through 是攝影機穿過一個開口；光效不屬於運鏡。"]
+    non_camera:
+      fx: ["MOTION_BLUR", "LIGHT_TRAIL", "金色光門"]
+      color: ["冷藍轉暖黃"]
+    tags: ["穿越", "穿梭", "光門", "flythrough"]
+  - id: "EX-030"
+    title_zh: "結尾漸遠淡出"
+    batch: "NARRATIVE_30"
+    mapping_class: "COMPOSITE"
+    natural_language_intent_zh: "男女主並肩站在山巔看日出，鏡頭緩慢後退並升高，人物越來越小，最後淡出。"
+    camera_dsl: ["/WS", "/DOLLYOUT:WS>EWS:SLOW", "/PEDESTAL:UP:SLOW"]
+    camera_semantics: ["後退與升高同時進行；淡出是剪輯。"]
+    non_camera:
+      editing: ["FADE_TO_WHITE"]
+      action: ["男女主並肩看日出"]
+      style: ["溫暖", "治癒", "希望"]
+    tags: ["結尾", "拉遠", "升高", "淡出", "dolly_out", "pedestal_up", "ending"]
+  - id: "EX-031"
+    title_zh: "推鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "攝影機往前移動，主體在畫面中變大。"
+    camera_dsl: ["/DOLLYIN"]
+    camera_semantics: ["實體攝影機前移，不是 /ZOOMIN。"]
+    tags: ["推鏡", "推近", "dolly_in", "push_in"]
+  - id: "EX-032"
+    title_zh: "拉鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "攝影機往後退，畫面帶進更多場景。"
+    camera_dsl: ["/DOLLYOUT"]
+    camera_semantics: ["實體攝影機後退，不是 /ZOOMOUT。"]
+    tags: ["拉鏡", "拉遠", "dolly_out", "pull_out"]
+  - id: "EX-033"
+    title_zh: "搖鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "攝影機原地左右轉動，帶出兩側的資訊。"
+    camera_dsl: ["/PAN"]
+    camera_semantics: ["攝影機原地轉動，不是 /TRUCK 側移；方向沒寫時由模型決定，會有警告。"]
+    tags: ["搖鏡", "橫搖", "pan"]
+  - id: "EX-034"
+    title_zh: "移鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "攝影機水平移動，畫面隨場景改變。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/TRUCK"
+        when_zh: "攝影機自己往側面平移"
+        default: true
+      - dsl: "/TRACKSIDE"
+        when_zh: "跟著人物一起側向移動"
+      - dsl: "/SLIDER"
+        when_zh: "短距離滑軌"
+    question_zh: "是攝影機自己往側面移，還是跟著人物一起移？距離長還是短？"
+    camera_semantics: ["「移鏡」是案例名稱，不是指令。"]
+    tags: ["移鏡", "側移", "平移", "truck", "slider"]
+  - id: "EX-035"
+    title_zh: "跟鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "攝影機跟著主體移動，主體在畫面中保持穩定。"
+    camera_dsl: ["/TRACK"]
+    refinements:
+      - dsl: "/FOLLOW"
+        when_zh: "攝影機在後方跟"
+      - dsl: "/LEAD"
+        when_zh: "攝影機在前方倒退"
+      - dsl: "/TRACKSIDE"
+        when_zh: "攝影機在側面"
+    camera_semantics: ["/TRACK 只說攝影機跟著主體；位置清楚時用 refinements 裡更精確的指令。"]
+    tags: ["跟鏡", "跟拍", "track"]
+  - id: "EX-036"
+    title_zh: "升鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "攝影機往上升，看到更高的視角。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/PEDESTAL:UP"
+        when_zh: "整台攝影機垂直升高"
+        default: true
+      - dsl: "/CRANE:UP"
+        when_zh: "搖臂畫大弧線升高"
+    question_zh: "是整台攝影機垂直升高，還是搖臂畫大弧線升高？"
+    camera_semantics: ["升鏡不是 /TILT:UP，那是鏡頭往上看。"]
+    tags: ["升鏡", "升高", "pedestal_up", "crane"]
+  - id: "EX-037"
+    title_zh: "降鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "攝影機往下降，視角變低。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/PEDESTAL:DOWN"
+        when_zh: "整台攝影機垂直下降"
+        default: true
+      - dsl: "/CRANE:DOWN"
+        when_zh: "搖臂畫大弧線下降"
+    question_zh: "是整台攝影機垂直下降，還是搖臂畫大弧線下降？"
+    camera_semantics: ["降鏡不等於 /TILT:DOWN，那是鏡頭往下看。"]
+    tags: ["降鏡", "下降", "pedestal_down", "crane"]
+  - id: "EX-038"
+    title_zh: "環繞"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "攝影機繞著主體移動，空間更立體。"
+    camera_dsl: ["/ORBIT"]
+    camera_semantics: ["攝影機繞主體走，不是主體自己轉；方向沒寫時由模型決定。"]
+    tags: ["環繞", "繞拍", "orbit"]
+  - id: "EX-039"
+    title_zh: "俯仰"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "鏡頭往上或往下轉，改變垂直方向的視角。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/TILT:UP"
+        when_zh: "往上轉"
+      - dsl: "/TILT:DOWN"
+        when_zh: "往下轉"
+    question_zh: "鏡頭要往上轉還是往下轉？"
+    camera_semantics: ["Tilt 是攝影機原地上下轉動，不是升降。"]
+    tags: ["俯仰", "上下搖", "tilt"]
+  - id: "EX-040"
+    title_zh: "甩鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "鏡頭快速甩過去，做出切換的衝擊感。"
+    camera_dsl: ["/WHIPPAN"]
+    camera_semantics: ["甩鏡本身就是快速，會標成 DEFINITION_IMPLIED；方向沒寫時由模型決定。"]
+    tags: ["甩鏡", "whip_pan"]
+  - id: "EX-041"
+    title_zh: "變焦"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "改變焦距，把視覺焦點拉近或推遠。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/ZOOMIN"
+        when_zh: "焦距拉近，畫面變緊"
+      - dsl: "/ZOOMOUT"
+        when_zh: "焦距推遠，畫面變寬"
+      - dsl: "/CRASHZOOM"
+        when_zh: "急推變焦，又快又大"
+    question_zh: "要推近還是拉遠？要不要急推？"
+    camera_semantics: ["Zoom 只改焦距，攝影機不動；不是推軌。"]
+    tags: ["變焦", "zoom"]
+  - id: "EX-042"
+    title_zh: "主觀鏡頭"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "用角色的眼睛看，讓觀眾代入。"
+    camera_dsl: ["/POV:A"]
+    camera_semantics: ["POV 是視點，不是運鏡，也不是角色看鏡頭。"]
+    tags: ["主觀鏡頭", "主觀", "第一人稱", "pov"]
+  - id: "EX-043"
+    title_zh: "過肩跟拍"
+    batch: "TECHNIQUE_36"
+    mapping_class: "COMPOSITE"
+    natural_language_intent_zh: "從一個人物的肩後，持續跟著另一個人物。"
+    camera_dsl: ["/OTS:A>B", "/TRACK"]
+    alternatives:
+      - dsl: "/OTS:A>B /FOLLOW"
+        when_zh: "明確從後方跟著 B"
+    camera_semantics: ["過肩是取景，跟拍是運鏡，兩者分開寫。"]
+    ambiguity: ["若明確從後方追隨 B，可細化為 /FOLLOW。"]
+    tags: ["過肩跟拍", "過肩", "跟拍", "ots", "track"]
+  - id: "EX-044"
+    title_zh: "頂視"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "從正上方往下看，看清楚空間配置。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/TOPDOWN"
+        when_zh: "正上方往下看"
+        default: true
+      - dsl: "/BIRDSEYE"
+        when_zh: "非常高空，地面像地圖"
+    question_zh: "是正上方的俯視，還是非常高空、地面像地圖？"
+    camera_semantics: ["/TOPDOWN 和 /BIRDSEYE 是不同的高度與角度。"]
+    tags: ["頂視", "俯視", "topdown", "birdseye"]
+  - id: "EX-045"
+    title_zh: "低機位"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "攝影機放低並平移，突出壓迫感或氣勢。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/GROUNDLEVEL /TRUCK"
+        when_zh: "攝影機貼近地面並側移"
+        default: true
+      - dsl: "/LOWANGLE"
+        when_zh: "重點是往上看的仰拍"
+    question_zh: "重點是攝影機很低，還是往上仰拍？"
+    camera_semantics: ["機位高度和機位角度是兩件事：/GROUNDLEVEL 是高度，/LOWANGLE 是角度。"]
+    tags: ["低機位", "貼地", "groundlevel", "low_angle"]
+  - id: "EX-046"
+    title_zh: "手持鏡頭"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "畫面帶輕微晃動，現場感更強。"
+    camera_dsl: ["/HANDHELD"]
+    camera_semantics: ["手持是器材與晃動質感，不是方向型運鏡。"]
+    tags: ["手持鏡頭", "手持", "handheld"]
+  - id: "EX-047"
+    title_zh: "遮擋轉場"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CAMERA_PLUS_EDITING"
+    natural_language_intent_zh: "讓前景物體掠過畫面，順勢接到下一個鏡頭。"
+    camera_dsl: ["/FGLAYER"]
+    candidates:
+      - dsl: "/FGLAYER /TRUCK"
+        when_zh: "攝影機側移，讓前景掠過畫面"
+      - dsl: "/FGLAYER /FLYTHROUGH:DOOR"
+        when_zh: "攝影機穿過門窗等開口；DOOR 換成實際的開口"
+    question_zh: "轉場時攝影機怎麼動：側移讓前景掠過，還是穿過一個開口？"
+    camera_semantics: ["轉場是剪輯，不是運鏡；運鏡要依場景另外配。"]
+    non_camera:
+      editing: ["OCCLUSION_TRANSITION"]
+    tags: ["遮擋轉場", "轉場", "前景", "fglayer", "transition"]
+  - id: "EX-048"
+    title_zh: "橫移揭示"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "攝影機往側面移動，一步步露出關鍵資訊。"
+    camera_dsl: ["/TRUCK:R"]
+    alternatives:
+      - dsl: "/TRUCK:L"
+        when_zh: "往左揭示"
+    camera_semantics: ["Truck 是攝影機側移，不是 Pan。"]
+    ambiguity: ["方向依場景，可改成 /TRUCK:L。"]
+    tags: ["橫移揭示", "橫移", "揭示", "truck", "reveal"]
+  - id: "EX-049"
+    title_zh: "慢推近"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "慢慢靠近主體，營造壓迫感或心動感。"
+    camera_dsl: ["/DOLLYIN:SLOW"]
+    camera_semantics: ["Dolly In 是攝影機實體前移，不是 Zoom In。"]
+    tags: ["慢推近", "推近", "推鏡", "dolly_in"]
+  - id: "EX-050"
+    title_zh: "急拉遠"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "快速拉開距離，表現反轉或失落。"
+    camera_dsl: ["/DOLLYOUT:FAST"]
+    camera_semantics: ["攝影機實體快速後退，不是變焦。"]
+    tags: ["急拉遠", "拉遠", "拉鏡", "dolly_out"]
+  - id: "EX-051"
+    title_zh: "環繞升鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "COMPOSITE"
+    natural_language_intent_zh: "一邊繞著主體一邊升高，把氣氛推高。"
+    camera_dsl: ["/ORBIT:R:180:SLOW", "/PEDESTAL:UP:SLOW"]
+    alternatives:
+      - dsl: "/ORBIT:R:180:SLOW /CRANE:UP:SLOW"
+        when_zh: "升高的路線是大型弧線"
+    camera_semantics: ["環繞與升高同時進行。"]
+    ambiguity: ["若升高軌跡是大型弧線，可改用 /CRANE。"]
+    tags: ["環繞升鏡", "環繞", "升鏡", "orbit", "pedestal_up"]
+  - id: "EX-052"
+    title_zh: "跟跑鏡頭"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "跟著奔跑的人物，加快節奏。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/TRACK"
+        when_zh: "只知道攝影機跟著跑"
+        default: true
+      - dsl: "/FOLLOW"
+        when_zh: "從後方跟"
+      - dsl: "/LEAD"
+        when_zh: "在前方倒退"
+      - dsl: "/TRACKSIDE"
+        when_zh: "在側面"
+      - dsl: "/FOLLOW /HANDHELD"
+        when_zh: "從後方跟，並帶手持感"
+    question_zh: "攝影機在人物的後方、前方還是側面？要不要手持感？"
+    camera_semantics: ["「跟跑」只說跟著跑，沒說攝影機在哪一邊。"]
+    tags: ["跟跑鏡頭", "跟跑", "奔跑", "跟拍", "track", "follow", "lead"]
+  - id: "EX-053"
+    title_zh: "搖鏡找人"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "鏡頭左右搜尋目標，製造懸念。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/PAN:R:SLOW"
+        when_zh: "往右找"
+        default: true
+      - dsl: "/PAN:L:SLOW"
+        when_zh: "往左找"
+      - dsl: "/PAN:L:SLOW THEN /PAN:R:SLOW"
+        when_zh: "左右來回找"
+    question_zh: "要往哪個方向找？還是左右來回？"
+    camera_semantics: ["「搖鏡找人」是案例名稱，不是指令。"]
+    tags: ["搖鏡找人", "搖鏡", "找人", "搜尋", "pan", "search"]
+  - id: "EX-054"
+    title_zh: "俯拍孤獨"
+    batch: "TECHNIQUE_36"
+    mapping_class: "COMPOSITE"
+    natural_language_intent_zh: "從高處往下拍，人物顯得渺小。"
+    camera_dsl: ["/HIGHANGLE", "/WS", "/NEGSPACE"]
+    alternatives:
+      - dsl: "/BIRDSEYE /EWS"
+        when_zh: "極端高空、人物極小"
+    camera_semantics: ["俯拍是機位角度，負空間是構圖。"]
+    tags: ["俯拍孤獨", "俯拍", "孤獨", "渺小", "high_angle", "negative_space"]
+  - id: "EX-055"
+    title_zh: "仰拍英雄"
+    batch: "TECHNIQUE_36"
+    mapping_class: "COMPOSITE"
+    natural_language_intent_zh: "從低處往上拍，強化角色氣勢。"
+    camera_dsl: ["/LOWANGLE", "/MFS"]
+    alternatives:
+      - dsl: "/WORMSEYE /FS"
+        when_zh: "更極端的地面仰視"
+    camera_semantics: ["仰拍是機位角度，沒有運鏡。"]
+    tags: ["仰拍英雄", "仰拍", "英雄", "氣勢", "low_angle"]
+  - id: "EX-056"
+    title_zh: "前景穿越"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "攝影機穿過前景物件，畫面層次更豐富。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/FGLAYER /TRACK"
+        when_zh: "攝影機移動時，前景物件掠過畫面"
+        default: true
+      - dsl: "/FLYTHROUGH:DOOR"
+        when_zh: "真的穿過門窗、拱門等開口；DOOR 換成實際的開口"
+    question_zh: "是前景物件掠過畫面，還是攝影機真的穿過一個開口？"
+    camera_semantics: ["前景層是構圖；穿越開口才是 Fly-through。"]
+    tags: ["前景穿越", "前景", "穿越", "fglayer", "flythrough"]
+  - id: "EX-057"
+    title_zh: "俯仰連接"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "用上下轉動的鏡頭，把場景和人物連起來。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/TILT:UP"
+        when_zh: "從人物往上帶到場景"
+      - dsl: "/TILT:DOWN"
+        when_zh: "從場景往下帶到人物"
+    question_zh: "從場景往下帶到人物，還是從人物往上帶到場景？"
+    camera_semantics: ["這是 Tilt 的敘事用法，不是新的運鏡。"]
+    tags: ["俯仰連接", "俯仰", "tilt"]
+  - id: "EX-058"
+    title_zh: "軌道運鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "用軌道或穩定器讓攝影機平順移動。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/DOLLYIN"
+        when_zh: "沿軌道往前"
+      - dsl: "/DOLLYOUT"
+        when_zh: "沿軌道往後"
+      - dsl: "/TRUCK"
+        when_zh: "沿軌道側移"
+      - dsl: "/SLIDER"
+        when_zh: "短距離滑軌"
+    question_zh: "沿軌道往前、往後，還是側移？"
+    camera_semantics: ["軌道是器材與路徑，不是固定的運鏡方向。"]
+    tags: ["軌道運鏡", "軌道", "dolly", "slider"]
+  - id: "EX-059"
+    title_zh: "滑動運鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "攝影機沿水平或斜線方向平順滑動。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/TRUCK"
+        when_zh: "水平側移"
+      - dsl: "/SLIDER"
+        when_zh: "短距離滑軌"
+    question_zh: "是水平側移，還是短距離滑軌？"
+    camera_semantics: ["斜線移動沒有對應的單一指令，不會硬套。"]
+    tags: ["滑動運鏡", "滑動", "truck", "slider"]
+  - id: "EX-060"
+    title_zh: "變焦運鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "改變焦距，做出視覺上的推近或拉遠。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/ZOOMIN"
+        when_zh: "推近"
+      - dsl: "/ZOOMOUT"
+        when_zh: "拉遠"
+      - dsl: "/DOLLYZOOM"
+        when_zh: "攝影機移動，焦距反向補償"
+    question_zh: "推近、拉遠，還是攝影機移動與變焦反向同步？"
+    camera_semantics: ["Zoom 只改焦距；Dolly Zoom 是攝影機移動加反向變焦。"]
+    tags: ["變焦運鏡", "變焦", "zoom", "dolly_zoom"]
+  - id: "EX-061"
+    title_zh: "跟隨運鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "攝影機持續跟拍運動中的主體。"
+    camera_dsl: ["/TRACK"]
+    refinements:
+      - dsl: "/FOLLOW"
+        when_zh: "攝影機在後方跟"
+      - dsl: "/LEAD"
+        when_zh: "攝影機在前方倒退"
+      - dsl: "/TRACKSIDE"
+        when_zh: "攝影機在側面"
+    camera_semantics: ["/TRACK 只說攝影機跟著主體。"]
+    tags: ["跟隨運鏡", "跟隨", "跟拍", "track"]
+  - id: "EX-062"
+    title_zh: "繞拍運鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "DIRECT"
+    natural_language_intent_zh: "攝影機繞著主體做圓形或弧形運動。"
+    camera_dsl: ["/ORBIT"]
+    camera_semantics: ["攝影機繞主體走，主體不轉。"]
+    tags: ["繞拍運鏡", "繞拍", "環繞", "orbit"]
+  - id: "EX-063"
+    title_zh: "升降運鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "攝影機垂直往上或往下移動。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/PEDESTAL:UP"
+        when_zh: "往上"
+      - dsl: "/PEDESTAL:DOWN"
+        when_zh: "往下"
+      - dsl: "/CRANE"
+        when_zh: "搖臂畫大弧線"
+    question_zh: "往上還是往下？是垂直升降還是搖臂弧線？"
+    camera_semantics: ["升降是整台攝影機移動，不是 Tilt。"]
+    tags: ["升降運鏡", "升降", "pedestal", "crane"]
+  - id: "EX-064"
+    title_zh: "轉場運鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CAMERA_PLUS_EDITING"
+    natural_language_intent_zh: "借用物體遮擋或運動，自然地轉到下一個鏡頭。"
+    camera_dsl: ["/FGLAYER"]
+    candidates:
+      - dsl: "/FGLAYER /TRUCK"
+        when_zh: "攝影機側移"
+      - dsl: "/FGLAYER /TRACK"
+        when_zh: "攝影機跟著主體"
+      - dsl: "/FGLAYER /FLYTHROUGH:DOOR"
+        when_zh: "攝影機穿過開口；DOOR 換成實際的開口"
+    question_zh: "轉場時攝影機怎麼動：側移、跟拍，還是穿過開口？"
+    camera_semantics: ["不新增轉場指令；轉場是剪輯，運鏡另外配。"]
+    non_camera:
+      editing: ["OCCLUSION_TRANSITION"]
+    tags: ["轉場運鏡", "轉場", "transition", "fglayer"]
+  - id: "EX-065"
+    title_zh: "POV 運鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "模擬人物的第一人稱視角拍攝。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/POV:A"
+        when_zh: "固定的主觀視角"
+        default: true
+      - dsl: "/POV:A /FOLLOW"
+        when_zh: "主觀視角往前走"
+      - dsl: "/POV:A /TRACK"
+        when_zh: "主觀視角跟著目標移動"
+      - dsl: "/POV:A /HANDHELD"
+        when_zh: "主觀視角帶手持晃動"
+    question_zh: "主觀視角要不要移動？怎麼移動？"
+    camera_semantics: ["POV 是視點；要移動得另外加運鏡。"]
+    tags: ["pov運鏡", "pov", "主觀", "第一人稱"]
+  - id: "EX-066"
+    title_zh: "無人機運鏡"
+    batch: "TECHNIQUE_36"
+    mapping_class: "CONTEXT_REQUIRED"
+    natural_language_intent_zh: "用無人機拍大範圍的空景或航拍。"
+    camera_dsl: []
+    candidates:
+      - dsl: "/DRONE"
+        when_zh: "只指定用無人機拍，是器材"
+        default: true
+      - dsl: "/DRONEVIEW"
+        when_zh: "高空斜俯的位置"
+      - dsl: "/FLYOVER"
+        when_zh: "空中飛越"
+      - dsl: "/DRONEREVEAL"
+        when_zh: "升高或後退的揭示"
+    question_zh: "要的是無人機的器材感、高空斜俯的位置、空中飛越，還是升高後退的揭示？"
+    camera_semantics: ["/DRONE 是器材；/DRONEVIEW 是位置；/FLYOVER 是飛越；/DRONEREVEAL 是揭示。"]
+    tags: ["無人機運鏡", "無人機", "航拍", "空拍", "drone"]
