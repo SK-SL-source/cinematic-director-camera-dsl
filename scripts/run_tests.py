@@ -428,6 +428,13 @@ def example_library_check():
     return test_example_library.run()
 
 
+def h3_contracts_check():
+    """The H3 content-contract and evidence-relation tests (tests/test_h3_contracts.py, CL-059): one row per test."""
+    sys.path.insert(0, os.path.join(ROOT, "tests"))
+    import test_h3_contracts
+    return test_h3_contracts.run()
+
+
 def main(argv):
     verbose = "-v" in argv
     if "--update-snapshot" in argv:
@@ -473,16 +480,19 @@ def main(argv):
                 passed += 1
                 ok += 1
         per_file.append(("snapshots/minimax_h3_core.json", len(snap_rows), ok))
-    if not filt or any("example_library" in x for x in filt):
-        lib_rows, ok = example_library_check(), 0
+    for key, fn, label in (("example_library", example_library_check, "(example library)"),
+                           ("h3_contracts", h3_contracts_check, "(H3 content contract)")):
+        if filt and not any(key in x for x in filt):
+            continue
+        lib_rows, ok = fn(), 0
         for name, fl in lib_rows:
             total += 1
             if fl:
-                failures.append(({"id": name, "file": "test_example_library.py", "line": 0, "input": "(example library)"}, fl))
+                failures.append(({"id": name, "file": f"test_{key}.py", "line": 0, "input": label}, fl))
             else:
                 passed += 1
                 ok += 1
-        per_file.append(("test_example_library.py", len(lib_rows), ok))
+        per_file.append((f"test_{key}.py", len(lib_rows), ok))
     print("file".ljust(28), "tests", "passed")
     for name, n, p in per_file:
         print(name.ljust(28), str(n).rjust(5), str(p).rjust(6))

@@ -9,17 +9,30 @@ the official prompt structures.
 
 A wrapper never writes or changes camera language. It only decides where the camera text goes, how references are
 labelled (<Subject N>, <Picture N>) and how keyframes are aligned. Subjects, scene, action and sound come from the caller.
+Every prompt is checked against its content (check_content, CL-059): each subject the camera text names is bound, the cut
+times increase and fall inside the video, the required fields are filled. The prompt is still returned so a draft can be
+read; the CLI fails unless --draft is given.
 
-CLI:  python h3_wrappers.py <mode> "<dsl>" content.json [--layers camera_core,temporal_clarifier,...] [--lint]
+CLI:  python h3_wrappers.py <mode> "<dsl>" [content.json] [--layers camera_core,...] [--profile ID] [--lint] [--draft]
+      exit 0: no problem found (or --draft) · 1: a problem was found · 2: the prompt could not be built
 content.json (every key optional unless the mode needs it):
-  subject_name      what to call the subject in Base modes (default: "the young woman shown in <Picture 1>")
+  subject_name      Base modes: what to call subject A (the subject of a shot whose DSL names none)
+  subject_name_b    Base modes: what to call subject B
+  subject_map       every DSL subject id and what the prompt calls it: {"A": "the woman", "B": "the man", "C": "the old woman"};
+                    Ref2VA: a <Subject N> that subjects defines, {"A": "<Subject 2>", "B": "<Subject 3>"} (default A = <Subject 1>,
+                    B = <Subject 2>). A subject the camera text names and nobody is bound to is an error. A shot whose DSL
+                    names no subject is about A, or about X in a /REACTION:X shot.
   opening           Base modes: the first sentence(s) of [Shot 1]: style, initial composition, anchors (I2VA: mention <Picture 1>)
   action            what happens after the camera sentences
   soundscape, music overall_soundscape / non_diegetic_music ("N/A" when none)
-  duration          FL2VA / L2VA: effective video length in seconds (the last frame's time)
-  shots             multi-shot: a list of {"opening", "action", "cut"} (one per DSL shot) instead of opening/action
+  duration          seconds of the target video (FL2VA / L2VA: the last frame's time, required); the cut times fall inside it
+  frames, fps       the frame count and rate of the generation (fps 24 when not given): the video length when duration is
+                    not given; --lint checks the prompt against them
+  n_refs            how many reference pictures the workflow attaches (checked by --lint)
+  shots             multi-shot: a list of {"opening", "action", "cut"} (one per DSL shot) instead of opening/action; the cut of
+                    [Shot 2] onward starts with its time: "At 00:02.500, the camera cuts to ..." (SRC-008 base-en 4.2)
   generation_profile the generation profile id for the routing evidence (or --profile)
-  (no content file: the module's neutral sample content for the mode is used, see sample_content)
+  (no content file: the module's neutral sample content for the mode is used, see sample_content: a demo, not production content)
   subjects          Ref2VA: lines of subject_definitions, e.g. "<Subject 1> is the young woman whose facial identity comes from <Picture 1> ..."
   task_tags         Ref2VA summary prefix, default ["reference generation"]
   summary           Ref2VA summary text (after the tag)
@@ -92,6 +105,16 @@ def camera_text(shot_out, layers=None):
     return " ".join(p for p in parts if p)
 
 
+def _as_float(x):
+    """A JSON number or a numeric string as a float; None for anything else (a bool is not a number here)."""
+    if isinstance(x, bool):
+        return None
+    try:
+        return float(x.strip() if isinstance(x, str) else x)
+    except (TypeError, ValueError):
+        return None
+
+
 def _shot_block(idx, shot, camera):
     cut = (shot.get("cut") or "").strip()
     opening = (shot.get("opening") or "").strip()
@@ -106,16 +129,14 @@ def base_prompt(mode, shots, cameras, soundscape, music, duration=None):
         raise ValueError(f"base_prompt: mode must be one of {BASE_MODES}")
     n = len(shots)
     head = ""
+    if mode in ("fl2va", "l2va") and _as_float(duration) is None:
+        raise ValueError(f"{mode} needs duration, the seconds of the target video (a number, not {duration!r})")
     if mode == "i2va":
         head = I2VA_LINE
     elif mode == "fl2va":
-        if duration is None:
-            raise ValueError("fl2va needs duration (seconds of the target video)")
-        head = FL2VA_LINE.format(n=n, s=float(duration))
+        head = FL2VA_LINE.format(n=n, s=_as_float(duration))
     elif mode == "l2va":
-        if duration is None:
-            raise ValueError("l2va needs duration (seconds of the target video)")
-        head = L2VA_LINE.format(n=n, s=float(duration))
+        head = L2VA_LINE.format(n=n, s=_as_float(duration))
     desc = " ".join(_shot_block(i + 1, sh, cameras[i]) for i, sh in enumerate(shots))
     body = (f"integrated_multimodal_description: {desc}\n\n"
             f"overall_soundscape: {soundscape.strip()}\n\n"
@@ -135,22 +156,53 @@ def ref2va_prompt(subjects, task_tags, summary, retention, style, shots, cameras
             "non_diegetic_music:\n" + (music or "N/A").strip() + "\n")
 
 
-def _fill(text, mode, content):
-    """Subject placeholders: Ref2VA uses the official <Subject N> labels; Base modes use the caller's subject name."""
+# ---------------------------------------------------------------- subjects (CL-059)
+
+PLACEHOLDER = re.compile(r"\{([A-Z][A-Z0-9_]*)\}")   # a subject of the camera core: {SUBJECT}, {A}, {B}, {C} ...
+LABEL = re.compile(r"<Subject \d+>")
+
+
+def bindings(mode, content):
+    """What the prompt calls each DSL subject id: subject_map first; then Ref2VA A = <Subject 1>, B = <Subject 2>, Base modes
+    A = subject_name, B = subject_name_b. An id that is not here is unbound, and check_content reports it."""
+    sm = content.get("subject_map")
+    b = {str(k).upper(): v for k, v in sm.items() if isinstance(v, str) and v.strip()} if isinstance(sm, dict) else {}
     if mode == "ref2va":
-        rep = {"{SUBJECT}": "<Subject 1>", "{A}": "<Subject 1>", "{B}": "<Subject 2>"}
+        b.setdefault("A", "<Subject 1>")
+        b.setdefault("B", "<Subject 2>")
     else:
-        name = content.get("subject_name") or SAMPLE_CONTENT["subject_name"]
-        rep = {"{SUBJECT}": name, "{A}": name, "{B}": content.get("subject_name_b", "the second person")}
-    # a subject name that opens a sentence starts with a capital letter ("The young woman stays about the same size ...")
-    text = re.sub(r"(^|[.!?]\s+)(\{SUBJECT\}|\{A\}|\{B\})", lambda m: m.group(1) + rep[m.group(2)][:1].upper() + rep[m.group(2)][1:], text)
-    for k, v in rep.items():
-        text = text.replace(k, v)
-    return text
+        for sid, key in (("A", "subject_name"), ("B", "subject_name_b")):
+            if content.get(key):
+                b.setdefault(sid, content[key])
+    return b
+
+
+def main_subject(state):
+    """Who {SUBJECT} is in one shot: X in a /REACTION:X shot whose DSL names no other subject (the shot frames the one who
+    reacts), otherwise A."""
+    sh = state["shot"]
+    if sh.get("function") == "REACTION" and sh.get("function_target") and sh.get("primary_subject") in (None, "S"):
+        return sh["function_target"]
+    return "A"
+
+
+def _fill(text, binding, main="A"):
+    """Subject placeholders -> what the prompt calls them ({SUBJECT} is the shot's main subject). An unbound placeholder stays
+    as it is for check_content to report. A name that opens a sentence starts with a capital letter
+    ("The young woman stays about the same size ...")."""
+    def name(sid):
+        return binding.get(main if sid == "SUBJECT" else sid)
+
+    def cap(m):
+        v = name(m.group(2))
+        return m.group(0) if v is None else m.group(1) + v[:1].upper() + v[1:]
+    text = re.sub(r"(^|[.!?]\s+)\{([A-Z][A-Z0-9_]*)\}", cap, text)
+    return PLACEHOLDER.sub(lambda m: name(m.group(1)) or m.group(0), text)
 
 
 def wrap_dsl(mode, dsl_text, content, layers=None, profile=None):
-    """DSL -> H3 camera core -> official prompt for the mode. Returns {"prompt", "cameras", "warnings", "render"}.
+    """DSL -> H3 camera core -> official prompt for the mode. Returns {"prompt", "cameras", "warnings", "errors", "render"};
+    errors are what check_content found wrong (the prompt is still built, so an unfinished draft can be read).
     profile (or content["generation_profile"]) is the generation profile id the routing evidence is read for; without
     it the routing is UNVERIFIED for this mode."""
     mode = mode.lower()
@@ -160,7 +212,10 @@ def wrap_dsl(mode, dsl_text, content, layers=None, profile=None):
     out = adapters.render(res, model="minimax_h3", h3_mode=mode, h3_profile_id=profile or content.get("generation_profile"))
     if out["errors"]:
         raise ValueError("DSL errors: " + "; ".join(out["errors"]))
-    cameras = [_fill(camera_text(sh, layers), mode, content) for sh in out["shots"]]
+    binding = bindings(mode, content)
+    states = [sh["state"] for sh in res["shots"]]
+    raw = [camera_text(sh, layers) for sh in out["shots"]]
+    cameras = [_fill(t, binding, main_subject(st)) for t, st in zip(raw, states)]
     W = list(out["warnings"])
     shots = content.get("shots")
     if not shots:
@@ -172,16 +227,139 @@ def wrap_dsl(mode, dsl_text, content, layers=None, profile=None):
         raise ValueError(f"content gives {len(shots)} shot(s) but the DSL has {len(cameras)}")
     sound, music = content.get("soundscape", ""), content.get("music", "N/A")
     if mode == "ref2va":
-        subjects = content.get("subjects") or []
-        retention = content.get("retention") or []
-        if not subjects or not retention:
-            W.append("Ref2VA: subject_definitions and retention_analysis lines are required by the official format (SRC-008 ref-en).")
-        prompt = ref2va_prompt(subjects, content.get("task_tags"), content.get("summary", ""), retention, content.get("style", ""), shots, cameras, sound, music)
+        prompt = ref2va_prompt(content.get("subjects") or [], content.get("task_tags"), content.get("summary", ""),
+                               content.get("retention") or [], content.get("style", ""), shots, cameras, sound, music)
     else:
         if mode == "i2va" and "<Picture 1>" not in (shots[0].get("opening") or ""):
             W.append("I2VA: the opening of [Shot 1] should anchor on <Picture 1> (style, subject, composition, scene; SRC-008 base-en 3.1).")
         prompt = base_prompt(mode, shots, cameras, sound, music, content.get("duration"))
-    return {"prompt": prompt, "cameras": cameras, "warnings": W, "render": out}
+    E, cw = check_content(mode, content, shots, raw, states, binding, prompt)
+    return {"prompt": prompt, "cameras": cameras, "warnings": W + cw, "errors": E, "render": out}
+
+
+# ---------------------------------------------------------------- the content contract (CL-059)
+
+CUT_TIME = re.compile(r"At (\d\d):(\d\d\.\d{3})\b")   # the official cut time of [Shot 2] onward, "At 00:02.500" (SRC-008 base-en 4.2)
+# content words that ask for the opposite of what a camera sentence fixes about the subject (warned, never rewritten);
+# "run" is left out: the floor lines of a set "run toward the far end" (the free-camera baseline content)
+_WALKS = re.compile(r"\b(?:walk(?:s|ing)?|strid(?:es|ing)|stroll(?:s|ing)|pac(?:es|ing)|wander(?:s|ing)|approach(?:es|ing)"
+                    r"|steps? (?:forward|back|backward|away|aside|toward|towards)|mov(?:es|ing) (?:toward|towards|away|across|forward|back))\b", re.I)
+_TURNS = re.compile(r"\b(?:turn(?:s|ing)? (?:around|round|away|back|left|right)|spin(?:s|ning)?|pivot(?:s|ing)?|whirl(?:s|ing)?)\b", re.I)
+_STILL = re.compile(r"\b(?:stand(?:s|ing)? still|stay(?:s|ing)? (?:still|in place|put)|remain(?:s|ing)? (?:still|standing|in place)"
+                    r"|does not move|doesn't move|sit(?:s|ting)? still|motionless)\b", re.I)
+_LOOKS = re.compile(r"\b(?:look(?:s|ing)? (?:away|down|up|around|back|aside)|glanc(?:es|ing)|turn(?:s|ing)? (?:her|his|their) head"
+                    r"|clos(?:es|ing) (?:her|his|their) eyes)\b", re.I)
+
+
+def _positive(x):
+    v = _as_float(x)
+    return v is not None and v > 0
+
+
+def video_length(content):
+    """Seconds of the target video: duration, else frames / fps (fps 24 when not given); None when neither is given."""
+    if _positive(content.get("duration")):
+        return _as_float(content["duration"])
+    fps = content.get("fps") or 24
+    if _positive(content.get("frames")) and _positive(fps):
+        return _as_float(content["frames"]) / _as_float(fps)
+    return None
+
+
+def _camera_demands(st):
+    """What the camera text of one shot fixes about the subject: (command, what it fixes, content patterns that contradict it)."""
+    out = []
+    for c in dict.fromkeys(mv["canonical"] for mv in st["movement"]):
+        if c == "ORBIT":
+            out.append((c, "keeps the subject in place, not turning", (_WALKS, _TURNS)))
+        elif c == "DOLLYZOOM":
+            out.append((c, "keeps the subject the same size and in the same place", (_WALKS,)))
+        elif c in ("TRACK", "FOLLOW", "LEAD", "TRACKSIDE"):
+            out.append((c, "moves with a subject who keeps moving", (_STILL,)))
+    if st["continuity"].get("screen_direction"):
+        out.append(("SCREEN", "has the subject move across the frame", (_STILL,)))
+    if any(r.partition(">")[2] not in ("", "CAM", "OFFUP", "OFFDOWN") for r in st["continuity"].get("eyeline", [])):
+        out.append(("EYELINE", "keeps the subject's eyes on one spot for the whole video", (_LOOKS,)))
+    return out
+
+
+def check_content(mode, content, shots, raw, states, binding, prompt):
+    """The content contract of one wrapped prompt. Errors: a subject the camera text names and nobody is bound to, a Ref2VA
+    <Subject N> that subject_definitions does not define, a missing, non-increasing or late cut time, an invalid duration, an
+    empty required field. Warnings: the content asks for the opposite of what the camera text fixes. Returns (errors, warnings)."""
+    E, W = [], []
+    if content.get("subject_map") is not None and not isinstance(content["subject_map"], dict):
+        E.append('subject_map must be a JSON object, e.g. {"A": "...", "B": "..."}.')
+    unbound = set()
+    for n, (t, st) in enumerate(zip(raw, states), 1):
+        main = main_subject(st)
+        for sid in dict.fromkeys(PLACEHOLDER.findall(t)):
+            rid = main if sid == "SUBJECT" else sid
+            who = f"the shot's subject ({rid})" if sid == "SUBJECT" else f"subject {rid}"
+            v = binding.get(rid)
+            if rid == "UNSPECIFIED":
+                unbound.add(sid)
+                E.append(f"[Shot {n}] the DSL does not say where the eyes go: write /EYELINE:<who>><target>.")
+            elif v is None:
+                unbound.add(sid)
+                E.append(f"[Shot {n}] the camera text names {who}, but the content does not say who {rid} is: "
+                         + ("bind it to a defined <Subject N> in subject_map." if mode == "ref2va" else
+                            "give it in subject_map" + {"A": " or subject_name", "B": " or subject_name_b"}.get(rid, "") + "."))
+            elif mode == "ref2va" and not LABEL.fullmatch(v):
+                E.append(f"[Shot {n}] Ref2VA calls {who} by its <Subject N> label, not {v!r} (subject_map).")
+    if mode == "ref2va":
+        for key in ("subjects", "retention"):
+            if content.get(key) is not None and not isinstance(content[key], list):
+                E.append(f"Ref2VA: {key} must be a list of lines.")
+        defined = {m.group(0) for m in (LABEL.match(str(s or "").strip()) for s in (content.get("subjects") or [])) if m}
+        for lab in dict.fromkeys(LABEL.findall(prompt)):
+            if lab not in defined:
+                E.append(f"the prompt uses {lab}, but no line of subject_definitions defines it.")
+    elif LABEL.search(prompt):
+        E.append("Base modes call people by name; <Subject N> is the Ref2VA label.")
+    left = [x for x in dict.fromkeys(PLACEHOLDER.findall(prompt)) if x not in unbound]
+    if left:
+        E.append("the content still holds " + ", ".join("{%s}" % x for x in left) + ": write what it stands for.")
+    # time line: [Shot 2] onward start with an increasing cut time inside the video (SRC-008 base-en 4.2)
+    for key, what in (("duration", "a positive number of seconds"), ("frames", "a positive number"), ("fps", "a positive number")):
+        if content.get(key) is not None and not _positive(content[key]):
+            E.append(f"{key} must be {what}, not {content[key]!r}.")
+    length, prev = video_length(content), 0.0
+    for n, sh in enumerate(shots, 1):
+        m = CUT_TIME.match((sh.get("cut") or "").strip())
+        if n == 1:
+            if m:
+                E.append("[Shot 1] takes no cut time; the first cut time belongs to [Shot 2] (SRC-008 base-en 4.2).")
+            continue
+        if not m:
+            E.append(f'[Shot {n}] has no cut time: its cut starts with the time, e.g. "At 00:02.500, the camera cuts to ..." (SRC-008 base-en 4.2).')
+            continue
+        t = int(m.group(1)) * 60 + float(m.group(2))
+        if t <= prev:
+            E.append(f"[Shot {n}] cuts at {t:.3f} s, not after " + ("the cut before it" if n > 2 else "the start of the video")
+                     + f" ({prev:.3f} s): cut times increase.")
+        elif length is not None and t >= length:
+            E.append(f"[Shot {n}] cuts at {t:.3f} s, but the video is {length:.2f} s long.")
+        prev = max(prev, t)
+    if len(shots) > 1 and length is None:
+        W.append("the cut times were not checked against the video length: give duration (or frames).")
+    # required fields (SRC-008 base-en 2.2, ref-en)
+    if not str(content.get("soundscape") or "").strip():
+        E.append('overall_soundscape is empty: give soundscape ("N/A" only for a video with no sound at all).')
+    if mode == "ref2va":
+        for key, field in (("subjects", "subject_definitions"), ("summary", "summary"), ("retention", "retention_analysis")):
+            v = content.get(key)
+            if not any(str(x or "").strip() for x in ([v] if isinstance(v, str) else (v or []))):
+                E.append(f"Ref2VA: {field} is empty: give {key} (official field, SRC-008 ref-en).")
+    # the camera text and the content must not ask for opposite things (warned; the wrapper rewrites neither)
+    for n, (sh, st) in enumerate(zip(shots, states), 1):
+        said = " ".join(str(sh.get(k) or "") for k in ("opening", "action"))
+        for c, what, patterns in _camera_demands(st):
+            m = next((x for x in (p.search(said) for p in patterns) if x), None)
+            if m:
+                W.append(f'[Shot {n}] /{c} {what}, but the content says "{m.group(0)}": the two ask for opposite things. '
+                         "Change the action or the camera move; the wrapper changes neither.")
+    return E, W
 
 
 def structure_check(mode, prompt):
@@ -211,43 +389,91 @@ def structure_check(mode, prompt):
     return problems
 
 
+def _lint(mode, prompt, content):
+    """The lab lint (LOCAL-002) when CAMERA_DSL_H3_LAB points at it, fed with the content's n_refs and frames (frames from
+    duration x fps when only the duration is given). Prints its result; returns the number of lint errors."""
+    lab = os.environ.get("CAMERA_DSL_H3_LAB")
+    if not lab:
+        print("LINT: SKIPPED (CAMERA_DSL_H3_LAB is not set: the lab lint is not on this machine)")
+        return 0
+    try:
+        sys.path.insert(0, lab)
+        from h3_prompt_lint import lint
+    except ImportError as e:
+        print(f"LINT: SKIPPED (the lab lint could not be loaded: {e})")
+        return 0
+    frames = int(round(_as_float(content["frames"]))) if _positive(content.get("frames")) else None
+    if frames is None and _positive(content.get("duration")) and _positive(content.get("fps") or 24):
+        frames = int(round(_as_float(content["duration"]) * _as_float(content.get("fps") or 24)))
+    n_refs = _as_float(content.get("n_refs"))
+    try:
+        E, Wl = lint(prompt, None if n_refs is None else int(n_refs), (), frames, mode=mode)
+    except Exception as e:   # a lint that cannot run has not passed
+        print(f"LINT: FAIL (the lab lint stopped: {type(e).__name__}: {e})")
+        return 1
+    for e in E:
+        print("LINT ERROR:", e)
+    for w in Wl:
+        print("LINT WARNING:", w)
+    print("LINT:", "FAIL" if E else "PASS")
+    return len(E)
+
+
 def _cli(argv):
     try:
         sys.stdout.reconfigure(encoding="utf-8")
     except Exception:
         pass
     import argparse
-    ap = argparse.ArgumentParser(description="MiniMax H3 mode wrappers over the shared camera core")
+    ap = argparse.ArgumentParser(description="MiniMax H3 mode wrappers over the shared camera core. Exit 0: no problem found "
+                                             "(or --draft); 1: a problem was found; 2: the prompt could not be built.")
     ap.add_argument("mode", choices=MODES)
     ap.add_argument("dsl")
     ap.add_argument("content", nargs="?", help="JSON file with subject / scene / action / sound (see the module docstring)")
     ap.add_argument("--layers", help="comma-separated movement layers to keep (default: all)")
     ap.add_argument("--profile", "--h3-profile", dest="profile",
                     help="generation profile id (models/minimax_h3_profile.yaml) for the routing evidence; without it everything is UNVERIFIED")
-    ap.add_argument("--lint", action="store_true", help="run the lab lint when CAMERA_DSL_H3_LAB is set")
+    ap.add_argument("--lint", action="store_true", help="also run the lab lint when CAMERA_DSL_H3_LAB is set (otherwise LINT: SKIPPED)")
+    ap.add_argument("--draft", action="store_true", help="report the problems without failing (exit 0): for reading an unfinished prompt")
     a = ap.parse_args(argv)
-    content = json.load(io.open(a.content, encoding="utf-8")) if a.content else sample_content(a.mode)
+    if a.content:
+        try:
+            content = json.load(io.open(a.content, encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            print(f"ERROR: cannot read the content file {a.content} ({type(e).__name__}: {e})")
+            return 2
+        if not isinstance(content, dict):
+            print("ERROR: the content file must hold one JSON object")
+            return 2
+    else:
+        content = sample_content(a.mode)
     layers = a.layers.split(",") if a.layers else None
-    r = wrap_dsl(a.mode, a.dsl, content, layers, a.profile)
+    try:
+        r = wrap_dsl(a.mode, a.dsl, content, layers, a.profile)
+    except ValueError as e:
+        print(f"ERROR: {e}")
+        return 2
+    except (TypeError, AttributeError) as e:   # a content value of the wrong type: a number or a list where text belongs
+        print(f"ERROR: a content value has the wrong type ({e})")
+        return 2
     print(r["prompt"])
+    if not a.content:
+        print("NOTE: no content file: the neutral sample content was used (a demo, not production content).")
     for w in r["warnings"]:
         print("WARNING:", w)
     if r["render"].get("routing"):
         print(adapters.routing_text(r["render"]["routing"], "en"))
-    for p in structure_check(a.mode, r["prompt"]):
+    problems = structure_check(a.mode, r["prompt"])
+    for p in problems:
         print("STRUCTURE:", p)
-    lab = os.environ.get("CAMERA_DSL_H3_LAB")
-    if a.lint and lab:
-        sys.path.insert(0, lab)
-        from h3_prompt_lint import lint
-        n_refs = {"t2va": 0, "i2va": 1, "fl2va": 2, "l2va": 1, "ref2va": 2}[a.mode]
-        E, Wl = lint(r["prompt"], n_refs, (), 124)
-        for e in E:
-            print("LINT ERROR:", e)
-        for w in Wl:
-            print("LINT WARNING:", w)
-        print("LINT:", "FAIL" if E else "PASS")
-    return 0
+    for e in r["errors"]:
+        print("ERROR:", e)
+    n = len(problems) + len(r["errors"]) + (_lint(a.mode, r["prompt"], content) if a.lint else 0)
+    if not n:
+        print("CHECK: PASS")
+        return 0
+    print(f"CHECK: {'DRAFT' if a.draft else 'FAIL'} ({n} problem(s){', not blocking: --draft' if a.draft else ''})")
+    return 0 if a.draft else 1
 
 
 if __name__ == "__main__":

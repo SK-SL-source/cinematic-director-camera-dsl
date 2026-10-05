@@ -1289,10 +1289,42 @@ def _asked_framing(d, zh=False):
     return f"start framing {d['start']}" + (", free end framing" if d.get("free_end") else "") + ang
 
 
-def _h3_routing(sh, st, scope):
+_MEASURED_TEXT = {}
+
+
+def _measured_text(md):
+    """The H3 camera text the current core writes for a measured DSL (one shot); None when the DSL is not one shot."""
+    if md not in _MEASURED_TEXT:
+        res = dsl.analyze(md)
+        _MEASURED_TEXT[md] = _render_video(res["shots"][0]["state"], "minimax_h3", "en")[0] if len(res["shots"]) == 1 else None
+    return _MEASURED_TEXT[md]
+
+
+def _measured_dsls(items):
+    out = []
+    for x in items:
+        md = x.get("measured_dsl", x.get("dsl"))
+        for one in (md if isinstance(md, list) else [md]):
+            if one and one not in out:
+                out.append(one)
+    return out
+
+
+def _evidence_relation(item, text, one_shot):
+    """EXACT when the evidence was measured with exactly this shot: one shot per generation (every measurement was), the
+    current core wording, and the same H3 camera text as its measured DSL. RELATED otherwise: another speed, amount,
+    sequence, extra command or shot, or the historical wording; its grade is named, never applied (CL-059)."""
+    if not one_shot or text is None or item.get("prompt_compatibility") == "PRE_REFACTOR_WORDING":
+        return "RELATED"
+    return "EXACT" if any(_measured_text(m) == text for m in _measured_dsls([item])) else "RELATED"
+
+
+def _h3_routing(sh, st, scope, text=None, one_shot=True):
     """Production routing for one shot under one evidence scope (mode + generation profile): shot-size reliability,
     viewpoint and camera-move grades, production routes, and what is UNVERIFIED there. Only the evidence of that scope
-    is read. Returns (routing dict, warning lines)."""
+    is read. text is the shot's H3 camera text and one_shot says the DSL has no other shot: a grade is applied only to the
+    shot it was measured with (evidence_relation EXACT, applicability VERIFIED); a measurement of another shot is named as
+    related evidence (RELATED, UNVERIFIED) and nothing at all is NONE (CL-059). Returns (routing dict, warning lines)."""
     ev = scope["evidence"]
     tag = f"{scope['mode'] or 'mode ?'}/{scope['generation_profile'] or 'no profile'}"
     size = st["shot"]["size"]
@@ -1307,7 +1339,7 @@ def _h3_routing(sh, st, scope):
                                                    "note", "note_zh", "note_code", "other_scopes", "other_scopes_zh")},
                "shot": sh["label"], "shot_size": size, "shot_size_reliability": None, "shot_size_source": None, "shot_size_status": None,
                "recommended_mode": None, "viewpoint": [], "focus": [], "lens": [], "continuity": [], "camera_motion": [],
-               "production_routes": {}, "unverified": [],
+               "production_routes": {}, "unverified": [], "evidence_relation": "NONE", "applicability": "UNVERIFIED",
                "seed_sensitivity": (ev or {}).get("seed_sensitivity", {}) or {}, "advice": []}
     W = []
     groups = _h3_lookup_groups(sh, st)
@@ -1353,13 +1385,13 @@ def _h3_routing(sh, st, scope):
                 idx.setdefault(e["key"], []).append(e)
         tables.append((t, idx))
     routes = h3_profile().get("production_routes", {}) or {}
-    routed = set()
+    routed, related_done = set(), set()
     moves = list(st["movement"])
     if st["rig"].get("locked") and not moves:     # a locked shot looks up the STATIC routes (CL-051)
         moves = [{"canonical": "STATIC", "direction": None, "start_position": None, "end_position": None, "amount": None}]
     for mv in moves:
         r = routes.get(mv["canonical"])
-        if not r or mv["canonical"] in routing["production_routes"]:
+        if not r or mv["canonical"] in routing["production_routes"] or mv["canonical"] in related_done:
             continue
         allr = [x for x in (r.get("routes", []) or []) if isinstance(x, dict)]
         here = [x for x in allr if str(x.get("mode", "")).upper() == scope["mode"] and x.get("generation_profile") == scope["generation_profile"]]
@@ -1383,10 +1415,23 @@ def _h3_routing(sh, st, scope):
         other = sorted({f"{x.get('mode')}/{x.get('generation_profile')}" + ("" if _ctx_of(x) == "CHARACTER_ANCHORED" else " " + _ctx_of(x))
                         + (" PROVISIONAL" if x.get("evidence_status") == "PROVISIONAL" else "") for x in allr if x not in same})
         if mine:
-            routing["production_routes"][mv["canonical"]] = mine
-            routed.add(mv["canonical"])
-            W.append(f"H3 ROUTING [{tag}]: {mv['canonical']} production route — " + _routes_summary(mine)
-                     + (f" Other scopes hold evidence for {mv['canonical']} ({'; '.join(other)}) — not applied." if other else ""))
+            # a route measured with exactly this shot is applied; a route measured with another shot of the same move
+            # (another speed, amount, sequence or extra command) is named as related evidence, its grade never applied (CL-059)
+            exact = [x for x in mine if _evidence_relation(x, text, one_shot) == "EXACT"]
+            near = [x for x in mine if not any(x is y for y in exact)]
+            note = f" Other scopes hold evidence for {mv['canonical']} ({'; '.join(other)}) — not applied." if other else ""
+            if exact:
+                routing["production_routes"][mv["canonical"]] = exact
+                routed.add(mv["canonical"])
+                W.append(f"H3 ROUTING [{tag}]: {mv['canonical']} production route — " + _routes_summary(exact) + note)
+                note = ""
+            if near:
+                related_done.add(mv["canonical"])
+                md = _measured_dsls(near)
+                routing.setdefault("related_routes", []).append({"canonical": mv["canonical"], "routes": near, "measured": md, "one_shot": one_shot})
+                W.append(f"H3 ROUTING [{tag}]: {mv['canonical']} related evidence only (measured with {', '.join(md)}"
+                         + ("" if one_shot else "; this DSL puts several shots in one generation") + ") — not applied, UNVERIFIED: "
+                         + _routes_summary(near) + note)
         elif same and not in_dir:
             measured = "/".join(sorted({str(x.get("direction")) for x in same if x.get("direction")}))
             routing.setdefault("direction_only", []).append({"canonical": mv["canonical"], "measured": measured, "asked": mv.get("direction")})
@@ -1441,22 +1486,40 @@ def _h3_routing(sh, st, scope):
                 routing["unverified"].append(g["label"])
             continue
         hits = fit
+        applied = related = False
         for hit in hits:
             if hit["cell"] in seen:
                 continue
             seen.add(hit["cell"])
-            routing[where].append(dict(hit, matched=mk))
             label = ("" if where == "camera_motion" else where + " ") + mk
             if hit.get("prompt_compatibility") == "PRE_REFACTOR_WORDING":   # historical evidence, never a current measurement
+                routing[where].append(dict(hit, matched=mk, relation="RELATED"))
+                applied = True
                 W.append(f"H3 ROUTING [{tag}]: {label} has a historical grade only: {hit['grade']} ({hit['cell']}, measured with the pre-refactor "
                          f"prompt wording); current-core applicability UNVERIFIED — the formal core writes these sentences differently.")
-            elif str(hit["grade"]) in ("C", "D", "F"):
-                W.append(f"H3 ROUTING [{tag}]: {label} measured H3_RELIABILITY {hit['grade']} "
-                         f"({hit['cell']}: mechanism {hit['mechanism']}, framing {hit['framing']}, timing {hit['timing']}, continuity {hit['continuity']}); "
-                         f"seed sensitivity HIGH: judge the first render, try another seed before rewording.")
+            elif _evidence_relation(hit, text, one_shot) == "RELATED":   # measured with another shot: named, never applied (CL-059)
+                routing.setdefault("related_rows", []).append(dict(hit, matched=mk, table=where))
+                related = True
+                W.append(f"H3 ROUTING [{tag}]: {label} related evidence only (measured with {hit['dsl']}"
+                         + ("" if one_shot else "; this DSL puts several shots in one generation")
+                         + f"): H3_RELIABILITY {hit['grade']} ({hit['cell']}) — not applied, UNVERIFIED.")
+            else:
+                routing[where].append(dict(hit, matched=mk, relation="EXACT"))
+                applied = True
+                if str(hit["grade"]) in ("C", "D", "F"):
+                    W.append(f"H3 ROUTING [{tag}]: {label} measured H3_RELIABILITY {hit['grade']} "
+                             f"({hit['cell']}: mechanism {hit['mechanism']}, framing {hit['framing']}, timing {hit['timing']}, continuity {hit['continuity']}); "
+                             f"seed sensitivity HIGH: judge the first render, try another seed before rewording.")
+        if related and not applied and g["canonical"] not in routed:
+            routing["unverified"].append(g["label"])
     if routing["unverified"]:
         W.append(f"H3 ROUTING [{tag}]: no evidence under this scope for " + ", ".join(routing["unverified"])
                  + " — UNVERIFIED (no grade borrowed from another mode or profile).")
+    exact = bool(routing["production_routes"]) or any(e.get("relation") == "EXACT" for t in EVIDENCE_TABLES for e in routing[t])
+    some = any(routing.get(k) for k in ("related_routes", "related_rows", "framing_only", "framing_only_rows", "direction_only", "context_only")
+               ) or any(routing[t] for t in EVIDENCE_TABLES)
+    routing["evidence_relation"] = "EXACT" if exact else "RELATED" if some else "NONE"
+    routing["applicability"] = "VERIFIED" if exact else "UNVERIFIED"
     return routing, W
 
 
@@ -1486,6 +1549,18 @@ def routing_text(routings, lang="en"):
              + f": {status}" + (f" ({note})" if note else "")]
     for r in routings:
         tag = f"[{r['shot']}] " if len(routings) > 1 else ""
+        rel = r.get("evidence_relation")
+        if rel and status != "UNVERIFIED":   # a scope without evidence already says UNVERIFIED in its first line (CL-059)
+            app = r.get("applicability")
+            if zh:
+                L.append(f"  {tag}證據關係：{rel}——適用性：{app}" + {"EXACT": "（這個範圍量過的就是這個鏡頭）",
+                                                                   "RELATED": "（下面的實測是別的鏡頭或舊用字，等級不套用到這個鏡頭）",
+                                                                   "NONE": "（這個範圍沒有量過這個鏡頭）"}[rel])
+            else:
+                L.append(f"  {tag}evidence relation: {rel} — applicability: {app}" + {
+                    "EXACT": " (this exact shot was measured under this scope)",
+                    "RELATED": " (the measurements below are of other shots or the old wording; their grades are not applied to this shot)",
+                    "NONE": " (nothing was measured for this shot under this scope)"}[rel])
         if r.get("shot_size_reliability") and r.get("shot_size_source") == "text_only":
             name = SIZE_SHORT_EN[r["shot_size"]].upper()
             if zh:
@@ -1515,6 +1590,16 @@ def routing_text(routings, lang="en"):
                     L.append(f"  {tag}{zh_name} {e['matched']}：H3_RELIABILITY {e['grade']}（{e['cell']}：機制 {e['mechanism']}、景別 {e['framing']}、時間 {e['timing']}、連續性 {e['continuity']}）［profile {e.get('profile')}］")
                 else:
                     L.append(f"  {tag}{en_name} {e['matched']}: H3_RELIABILITY {e['grade']} ({e['cell']}: mechanism {e['mechanism']}, framing {e['framing']}, timing {e['timing']}, continuity {e['continuity']}) [profile {e.get('profile')}]")
+        for e in r.get("related_rows", []):      # measured with another shot under this scope: named, never applied (CL-059)
+            en_name, zh_name = _TABLE_LABELS[e["table"]]
+            if zh:
+                L.append(f"  {tag}{'' if e['table'] == 'camera_motion' else zh_name + ' '}{e['matched']} 相關證據（不套用；實測的是 {e['dsl']}）："
+                         f"H3_RELIABILITY {e['grade']}（{e['cell']}：機制 {e['mechanism']}、景別 {e['framing']}、時間 {e['timing']}、連續性 {e['continuity']}）"
+                         f"［profile {e.get('profile')}］——UNVERIFIED")
+            else:
+                L.append(f"  {tag}{'' if e['table'] == 'camera_motion' else en_name + ' '}{e['matched']} related evidence (not applied; measured with {e['dsl']}): "
+                         f"H3_RELIABILITY {e['grade']} ({e['cell']}: mechanism {e['mechanism']}, framing {e['framing']}, timing {e['timing']}, continuity {e['continuity']}) "
+                         f"[profile {e.get('profile')}] — UNVERIFIED")
         for d in r.get("framing_only_rows", []):      # measured, but for another shot size / end size: named, never applied
             en_name, zh_name = _TABLE_LABELS[d["table"]]
             if zh:
@@ -1526,6 +1611,11 @@ def routing_text(routings, lang="en"):
                          f"related evidence (not applied): {rel}")
         for cmd, pr in (r.get("production_routes") or {}).items():
             L.append((f"  {tag}{cmd} 路徑（DSL 語義不變）：" if zh else f"  {tag}{cmd} production route (DSL semantics unchanged): ") + _routes_summary(pr))
+        for d in r.get("related_routes", []):    # routes measured with another shot of the move: named, never applied (CL-059)
+            more = "" if d.get("one_shot", True) else ("；這個 DSL 一次生成多個鏡頭" if zh else "; this DSL puts several shots in one generation")
+            L.append((f"  {tag}{d['canonical']} 相關證據（不套用；實測的是 {'、'.join(d['measured'])}{more}）——UNVERIFIED：" if zh else
+                      f"  {tag}{d['canonical']} related evidence (not applied; measured with {', '.join(d['measured'])}{more}) — UNVERIFIED: ")
+                     + _routes_summary(d["routes"]))
         for d in r.get("direction_only", []):
             L.append(f"  {tag}{d['canonical']}：這個範圍只量過方向 {d['measured']}，不套用到方向 {d['asked']}" if zh else
                      f"  {tag}{d['canonical']}: measured under this scope for direction {d['measured']} only — not applied to direction {d['asked']}")
@@ -1599,7 +1689,7 @@ def render(result, model="generic_video", mode=None, lang=None, h3_mode=None, h3
         else:
             text, w = _render_image(st, model, lang, edit=(kind == "image_edit"))
         if scope:
-            routing, rw = _h3_routing(sh, st, scope)
+            routing, rw = _h3_routing(sh, st, scope, text, len(result["shots"]) == 1)
             w += rw
             routings.append(routing)
         warnings += [f"{sh['label']}: {x}" for x in w]

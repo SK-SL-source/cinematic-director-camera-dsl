@@ -30,6 +30,70 @@
 
 ---
 
+## Release v1.1.0 · 2026-10-06 · H3 content checks and exact-shot routing
+
+- The H3 wrapper checks the content before a prompt is used: every subject the camera text names is bound (`subject_map`; in Ref2VA
+    a defined `<Subject N>`), a `/REACTION:X` shot frames X, the cut times of a multi-shot prompt increase and fall inside the clip,
+    and the required fields are filled. A camera move that the action contradicts is flagged; nothing is rewritten.
+- The wrapper CLI exits 0 when nothing is wrong, 1 when a problem is found and 2 when the prompt cannot be built; `--draft` only reports.
+- The H3 routing applies a measured grade only to the shot it was measured with (evidence relation EXACT); a measurement of another
+    shot, speed, amount, sequence or extra command is named as related evidence, and the shot stays UNVERIFIED.
+- Prompts built from valid content are unchanged word for word. The entry CL-059 below (in Chinese) records the change.
+
+## CL-059 · 2026-10-06 · H3 包裝程式檢查內容（角色、切鏡時間、必要欄位、運鏡和動作衝突）、CLI 回傳碼；routing 分開 EXACT 與 RELATED
+
+- 原因：外部檢視（2026-10-05）重現了五個 P1 問題，維護者決定修在包裝程式裡。
+    1. 角色：`/CU /REACTION:C` 留下 `{C}`；`/MCU /OTS:A>B` 只定義 `<Subject 1>` 卻引用 `<Subject 2>`；`/CU /REACTION:B` 景別句框 A、
+       反應句寫 B；Base 模式沒給名字時，悄悄用示範內容的名字。
+    2. 時間軸與必要內容：第二鏡沒有切鏡時間、切鏡時間超過片長、L2VA 片長 0、Ref2VA 必要欄位全空，結構檢查都通過。
+    3. CLI：結構檢查有錯仍回傳 0；`--lint` 沒有實驗室時什麼都不印；lint 的參考圖數與幀數是寫死的。
+    4. 運鏡文字和動作互相矛盾（環繞寫「不轉身」，動作寫「轉身走開」），沒有提醒。
+    5. routing 把 `/MS /TILT:DOWN` 的 PRODUCTION_VALIDATED 套到 `:FAST`、`:30`、時間序列這些沒量過的鏡頭；README 的 30 秒示範
+       `/MS /LOWANGLE /DOLLYIN:MS>MCU:SLOW` 也因此顯示成已驗證的路線。
+- 修改前：
+    - `scripts/h3_wrappers.py`（sha256 前 16 碼 f8533fb5c8adc02a）：`_fill()` 只換 `{SUBJECT}`、`{A}`、`{B}`，`{SUBJECT}` 一律是 A；Base 模式
+      沒有名字時用示範內容的名字，B 沒有名字時寫 "the second person"；`structure_check()` 只查欄位格式；`_cli()` 固定回傳 0，
+      內容檔讀不到時丟出含安裝路徑的 traceback；`--lint` 的參考圖數依 mode 寫死、幀數固定 124。
+    - `scripts/adapters.py`：production route 只比對方向、起幅、落幅、角度，矩陣列只比對景別；這些相符就套用等級。
+- 修改後：
+    - 包裝程式（sha256 前 16 碼 f8533fb5c8adc02a → f689eaab282c3c71）：
+      - 角色：新的 content 鍵 `subject_map`（每個 DSL 角色代號叫什麼；Ref2VA 寫定義過的 `<Subject N>`）。`{SUBJECT}` 是這一鏡的主體：A，
+        或 `/REACTION:X` 的 X。運鏡文字提到但沒有綁定的角色、Ref2VA 沒有定義的 `<Subject N>`、Base 模式出現 `<Subject N>`、
+        內容裡留著的 `{X}` 都是錯誤。不再有預設名字。
+      - 時間軸：`[Shot 2]` 起的 cut 以 "At MM:SS.mmm" 開頭、遞增、小於片長（`duration`，或 `frames`／`fps`，fps 預設 24）；`[Shot 1]`
+        不帶時間；duration、frames、fps 必須是正數（寫成文字的數字照舊可用）；不知道片長時只警告。
+      - 必要欄位：overall_soundscape；Ref2VA 另有 subject_definitions、summary、retention_analysis。
+      - 運鏡和動作衝突，只警告、不改字：ORBIT／DOLLYZOOM 對上走動或轉身；TRACK／FOLLOW／LEAD／TRACKSIDE／SCREEN 對上靜止；
+        整段鎖定的視線對上移開視線。
+      - `wrap_dsl()` 多回傳 `errors`，提示詞照樣產生，草稿可以看。
+      - CLI：沒有問題回傳 0（CHECK: PASS）；有問題回傳 1（CHECK: FAIL）；`--draft` 只回報（CHECK: DRAFT，回傳 0）；內容檔讀不到、
+        內容型別錯誤或 DSL 錯誤回傳 2，只印一行 ERROR。`--lint` 沒有實驗室時印 LINT: SKIPPED；有的話用內容的 n_refs 與 frames
+        （沒給 frames 就用 duration×fps），lint 錯誤回傳 1。沒有內容檔時註明用的是示範內容。
+    - routing（adapters.py 02a10784b164c048 → 40d6490fc5a6e12c）：每筆證據多一個 evidence relation。只有「一次生成一個鏡頭、目前 Core 用字、運鏡文字和實測 DSL 完全相同」是 EXACT，
+      等級才套用（applicability VERIFIED）。速度、幅度、時間序列、多一個指令、一次生成多鏡、舊用字不同時是 RELATED：列出實測 DSL
+      與等級，不套用（UNVERIFIED）。什麼都沒量過是 NONE。範圍有證據時，routing 區塊第一行後面多一行 evidence relation；中文版同步。
+    - 文件：models/minimax_h3.md、SKILL.md、README 兩種語言寫明內容檢查與 EXACT 規則；README 30 秒示範換成新的實際輸出（RELATED）。
+- 影響 Command：無（104 個指令、244 個別名、文法、鏡頭文字都不變）
+- 影響 Adapter：minimax_h3 的 routing 輸出（evidence_relation、applicability、related_routes、related_rows）；鏡頭文字不變；其他 adapter 不變。
+- 影響 Test：
+    - 新增 tests/test_h3_contracts.py 40 項（角色 10、時間軸 9、必要欄位 3、衝突 5、CLI 7、routing 6），由 run_tests 與 release gate
+      呼叫；放在 tests/*.md 外，不動 H3 快照語料。用修改前的程式跑：38/40 失敗，通過的 2 項是「不該警告」的反向測試。
+    - tests/h3_routing.md 新增 RT-X-01～04；改寫 RT-E-02、RT-E-03、RT-E-13、RT-E-14、RT-E-15、RT-E-27、RT-F-03、RT-H-06、RT-K-01、RT-K-08。
+    - tests/model_adapters.md 改寫 MS-H3-24、MS-H3-25。
+    - 快照 tests/snapshots/minimax_h3_core.json 沒有重凍：鏡頭文字 406 條、wrapper 提示詞 20 條逐字相同（sha 1c0c713b80207e0a）。
+    - 用新的包裝程式重建三批實際出片用過的提示詞（多模式基線 64、自由鏡頭基線 60、I2VA 生產鏡頭 14）：138 份逐字相同，
+      0 個內容錯誤，0 個衝突警告。
+    - 測試總數 866 → 910。
+- 是否破壞 backward compatibility：是。
+    - 有效內容的提示詞一字不變（快照與 138 份實測提示詞為證）。實測證據記的 wrapper_snapshot f8533fb5c8adc02a 保留不改：那是產生證據的版本。
+    - 會變的：Base 模式沒給 subject_name 不再補示範名字，`{B}` 沒有名字不再寫 "the second person"，兩者都變成錯誤；`/REACTION:X`
+      鏡頭的景別句改框 X；CLI 回傳碼（有問題 1、建不出提示詞 2）與最後一行 CHECK；`wrap_dsl()` 多回傳 errors。
+    - routing：運鏡文字和實測 DSL 不同的鏡頭不再拿到等級，例如 `/MS /DOLLYIN:MS>MCU`（實測的是 `/MS /EYELEVEL /DOLLYIN:MS>MCU`）、
+      `/MCU /DOLLYOUT:MCU>MS`、`/MS /DOLLYIN:SLOW`；PRE_REFACTOR 的 production route 改列為 related evidence。等級、profile、
+      42 格判定都沒動。
+- 檔案：scripts/h3_wrappers.py, scripts/adapters.py, scripts/run_tests.py, scripts/audit.py, tests/test_h3_contracts.py, tests/h3_routing.md,
+    tests/model_adapters.md, models/minimax_h3.md, SKILL.md, README.md, README.zh-TW.md
+
 ## Release v1.0.0 · 2026-10-04 · first public release
 
 - Camera DSL (104 canonical commands, 244 aliases, 18 grammar rules, frozen as V2_BASELINE) compiled into one Canonical Camera IR, with

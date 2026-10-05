@@ -14,7 +14,7 @@
 
 **MiniMax H3 另外有實測可靠度路由**，涵蓋 H3 全部五種輸入模式：T2VA、I2VA、FL2VA、L2VA、Ref2VA。
 
-`104 個指令` · `244 個別名` · `8 個模型轉接器` · `5 種 H3 輸入模式` · `866/866 測試通過` · `MIT`
+`104 個指令` · `244 個別名` · `8 個模型轉接器` · `5 種 H3 輸入模式` · `910/910 測試通過` · `MIT`
 
 這是 Claude Code 的 skill，也可以用 Python 命令列執行。[30 秒示範](#30-秒示範) · [安裝](#安裝) · [快速開始](#快速開始) · [MiniMax H3 實測](#minimax-h3-實測)
 
@@ -50,12 +50,13 @@ MiniMax H3 的運鏡文字，程式實際輸出：
 WARNING: S1: H3: with nothing near the lens a push reads as a zoom (SRC-009 camera-grammar:41-43). The DSL cannot add scene objects; add a near object in the scene description if the travel must read.
 UNSPECIFIED (left to the model): S1.DOLLYIN.amount
 H3 routing (models/minimax_h3_profile.yaml) — evidence scope: mode I2VA, generation profile LOCAL_H3_I2VA_PDD8_Q_416: MIXED
+  evidence relation: RELATED — applicability: UNVERIFIED (…)
   shot size MEDIUM SHOT: from the first frame — reliability HIGH (PROVISIONAL)
-  DOLLYIN production route (DSL semantics unchanged): … with_foreground_motion_anchor: PARALLAX_ASSISTED_PUSH_IN PRODUCTION_VALIDATED (… confidence 3/3 tested seeds PASS …)
-  UNVERIFIED under this scope: LOWANGLE
+  DOLLYIN related evidence (not applied; measured with /MS /EYELEVEL /DOLLYIN:MS>MCU) — UNVERIFIED: … with_foreground_motion_anchor: PARALLAX_ASSISTED_PUSH_IN PRODUCTION_VALIDATED (… confidence 3/3 tested seeds PASS …)
+  UNVERIFIED under this scope: DOLLYIN, LOWANGLE
 ```
 
-白話說：在 H3 首幀模式下，從中景推到中近景的推鏡，只要首幀裡有一個靠近鏡頭的物件，3 次測試 3 次通過。低角度在這個模式從來沒有測過，所以標成 UNVERIFIED，不會用猜的。
+白話說：在 H3 首幀模式下，`/MS /EYELEVEL /DOLLYIN:MS>MCU` 這個推鏡，只要首幀裡有一個靠近鏡頭的物件，3 次測試 3 次通過。你的鏡頭不是那一個：多了低角度和慢速。所以那個 3 次通過只列為相關證據、不套用，你的鏡頭標成 UNVERIFIED，不會用猜的。
 
 ## 為什麼不直接寫運鏡提示詞？
 
@@ -151,11 +152,12 @@ H3 routing (models/minimax_h3_profile.yaml) — evidence scope: mode I2VA, gener
 | INSUFFICIENT_EVIDENCE | 輸入條件做不出這個運鏡，或量測無法判定 |
 | UNVERIFIED | 這個確切範圍沒有測過 |
 
-**可靠度只算在測過的範圍。** 結果只適用於它自己的模式、測試 profile、指令、方向、起幅與落幅、角度和證據類型。以下是 routing 的實際回答：
+**可靠度只算在測過的範圍。** 結果只適用於它自己的模式、測試 profile、指令、方向、起幅與落幅、角度和證據類型，也只適用於測過的那個鏡頭本身。以下是 routing 的實際回答：
 
 - I2VA 的結果不會借給 T2VA：`/MS /TILT:DOWN` 在 I2VA 是 PRODUCTION_VALIDATED，在 T2VA 仍是 LOW。
 - 中景的結果不會借給全景：`/FS /TILT:DOWN` 得到 "no production route measured under this scope for start framing FS — UNVERIFIED"，`/MS /TILT:DOWN` 只列為相關證據。
 - 45 度的結果不會借給 90 度：`/MS /ORBIT:R:90` 得到 UNVERIFIED，`/MS /ORBIT:R:45` 只列為相關證據。
+- 一個鏡頭的結果不會借給另一個鏡頭：`/MS /TILT:DOWN:FAST`（速度不同）只把 `/MS /TILT:DOWN` 列為相關證據，不套用它的等級。
 
 沒有完全相符的證據就是 UNVERIFIED，絕不猜一個等級。
 
@@ -260,6 +262,8 @@ python scripts/h3_wrappers.py i2va "/MS /TILT:DOWN"
 
 沒有指定 profile 時，每一項都是 UNVERIFIED：沒有預設值，也不會用猜的。加 `--lang zh` 會用中文顯示 routing。
 
+包裝程式用你的 `content.json`（主體、場景、動作、聲音；沒有給就用中性的示範內容）組成提示詞，並先檢查：運鏡文字提到的每個人都要有名字（`subject_map`），每個切鏡時間都要落在片長內，必要欄位不能空白。有問題就回傳 1；加 `--draft` 只回報、不擋。
+
 實測得到的使用技巧：
 
 - 起幅要準就給 H3 一張首幀。只靠文字，畫面通常會比要求的更寬。
@@ -344,7 +348,7 @@ DSL 只解析一次，變成一份 Canonical Camera IR，裡面把景別、機�
 | | |
 |---|---|
 | 版本 | v1.0.0 |
-| 測試 | 866/866 通過：`python scripts/run_tests.py` |
+| 測試 | 910/910 通過：`python scripts/run_tests.py` |
 | H3 生產基線 | COMPLETE：兩種證據、五種輸入模式都完成 |
 | 所有指令 × 模式 × 景別 × 角度 | PARTIAL，設計上如此：沒測過的範圍一律回答 UNVERIFIED |
 

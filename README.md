@@ -16,7 +16,7 @@ The same camera intent, compiled for **MiniMax H3 · Kling · Veo · FLUX · Qwe
 
 **MiniMax H3 adds production-tested reliability routing** across all five H3 input modes: T2VA, I2VA, FL2VA, L2VA and Ref2VA.
 
-`104 commands` · `244 aliases` · `8 model adapters` · `5 H3 input modes` · `866/866 tests passing` · `MIT`
+`104 commands` · `244 aliases` · `8 model adapters` · `5 H3 input modes` · `910/910 tests passing` · `MIT`
 
 A skill for Claude Code, with a Python command line. It brings real cinematography into AI video prompt engineering, and the camera text fits into any prompt, including a ComfyUI workflow. [30-second demo](#30-second-demo) · [Install](#install) · [Quick start](#quick-start) · [Tested on MiniMax H3](#tested-on-minimax-h3)
 
@@ -52,12 +52,13 @@ And what to watch for, with H3's first-frame mode selected (real output, long li
 WARNING: S1: H3: with nothing near the lens a push reads as a zoom (SRC-009 camera-grammar:41-43). The DSL cannot add scene objects; add a near object in the scene description if the travel must read.
 UNSPECIFIED (left to the model): S1.DOLLYIN.amount
 H3 routing (models/minimax_h3_profile.yaml) — evidence scope: mode I2VA, generation profile LOCAL_H3_I2VA_PDD8_Q_416: MIXED
+  evidence relation: RELATED — applicability: UNVERIFIED (…)
   shot size MEDIUM SHOT: from the first frame — reliability HIGH (PROVISIONAL)
-  DOLLYIN production route (DSL semantics unchanged): … with_foreground_motion_anchor: PARALLAX_ASSISTED_PUSH_IN PRODUCTION_VALIDATED (… confidence 3/3 tested seeds PASS …)
-  UNVERIFIED under this scope: LOWANGLE
+  DOLLYIN related evidence (not applied; measured with /MS /EYELEVEL /DOLLYIN:MS>MCU) — UNVERIFIED: … with_foreground_motion_anchor: PARALLAX_ASSISTED_PUSH_IN PRODUCTION_VALIDATED (… confidence 3/3 tested seeds PASS …)
+  UNVERIFIED under this scope: DOLLYIN, LOWANGLE
 ```
 
-In plain words: in H3's first-frame mode, a push-in from a medium shot to a medium close-up passed 3 of 3 tests when the first frame had an object close to the lens. The low angle was never measured in that mode, so it is marked UNVERIFIED instead of being guessed.
+In plain words: in H3's first-frame mode, the push-in `/MS /EYELEVEL /DOLLYIN:MS>MCU` passed 3 of 3 tests when the first frame had an object close to the lens. Your shot is not that shot: it adds a low angle and a slow speed. So the 3 of 3 is shown as related evidence, not applied, and your shot is marked UNVERIFIED instead of being guessed.
 
 ## Why not just write camera prompts?
 
@@ -153,11 +154,12 @@ Start framing, end framing, landing, screen position and behaviour relative to a
 | INSUFFICIENT_EVIDENCE | the input could not express the move, or the measurement could not decide |
 | UNVERIFIED | this exact scope was not measured |
 
-**Reliability is scoped.** A result holds only for its own mode, test profile, command, direction, start and end framing, angle and evidence type. Real routing answers:
+**Reliability is scoped.** A result holds only for its own mode, test profile, command, direction, start and end framing, angle and evidence type, and only for the exact shot that was tested. Real routing answers:
 
 - I2VA is not lent to T2VA: `/MS /TILT:DOWN` is PRODUCTION_VALIDATED in I2VA and stays LOW in T2VA.
 - MS is not lent to FS: `/FS /TILT:DOWN` gets "no production route measured under this scope for start framing FS — UNVERIFIED", and `/MS /TILT:DOWN` is only named as related evidence.
 - 45 degrees is not lent to 90: `/MS /ORBIT:R:90` gets UNVERIFIED, with `/MS /ORBIT:R:45` named as related evidence.
+- One shot is not lent to another: `/MS /TILT:DOWN:FAST` (another speed) gets `/MS /TILT:DOWN` only as related evidence, without its grade.
 
 No exact evidence means UNVERIFIED, never a guessed grade.
 
@@ -262,6 +264,8 @@ python scripts/h3_wrappers.py i2va "/MS /TILT:DOWN"
 
 Without a profile every item is UNVERIFIED: there is no default and nothing is guessed. `--lang zh` prints the routing in Chinese.
 
+The wrapper builds the prompt from your `content.json` (subject, scene, action and sound; without it a neutral demo sample is used) and checks it first: every person the camera text names must have a name (`subject_map`), each cut time must fall inside the clip, and the required fields must be filled. It exits 1 on a problem; `--draft` only reports it.
+
 Practical tips from the tests:
 
 - Need an exact opening frame? Give H3 a first frame. Text-only shots tend to start wider than asked.
@@ -346,7 +350,7 @@ The DSL is parsed once into a Canonical Camera IR, which keeps shot size, viewpo
 | | |
 |---|---|
 | Release | v1.0.0 |
-| Tests | 866/866 passing: `python scripts/run_tests.py` |
+| Tests | 910/910 passing: `python scripts/run_tests.py` |
 | H3 production baseline | COMPLETE: both evidence types, all five input modes |
 | Every command × mode × framing × angle | PARTIAL by design: outside a measured scope the answer is UNVERIFIED |
 

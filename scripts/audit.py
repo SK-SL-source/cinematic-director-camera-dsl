@@ -1150,7 +1150,7 @@ def files_audit(R):
             "registry/conflict_matrix.yaml", "registry/provenance.yaml", "schemas/camera_dsl_schema.md", "schemas/camera_dsl_schema.yaml",
             "schemas/examples.yaml"] + [f"references/{f}" for f in list(REF_MAP) + ["15_aliases.md", "16_conflict_rules.md"]] + \
            [f"models/{m}.md" for m in MODELS] + [f"examples/{e}.md" for e in ("basic", "dialogue", "action", "storyboard", "advanced_combinations")] + \
-           ["SOURCES.md", "scripts/example_library.py", "tests/test_example_library.py"] + \
+           ["SOURCES.md", "scripts/example_library.py", "tests/test_example_library.py", "tests/test_h3_contracts.py"] + \
            [f"examples/production_library/{f}" for f in ("README.md", "production_examples.yaml", "schema.yaml", "narrative_30.md", "technique_36.md")]
     for f in need:
         if not os.path.exists(os.path.join(ROOT, f)):
@@ -1509,7 +1509,7 @@ def release_gate():
     for _name, fl in run_tests.snapshot_check():   # the frozen H3 camera text and wrapper prompts (CAMERA_CORE_CHANGES = 0)
         total += 1
         passed += not fl
-    for _name, fl in run_tests.example_library_check():   # the Production Example Library (CL-057)
+    for _name, fl in run_tests.example_library_check() + run_tests.h3_contracts_check():   # the example library (CL-057), the H3 contract (CL-059)
         total += 1
         passed += not fl
     sec = lambda name: R.sections.get(name, {"errors": [], "warnings": []})
