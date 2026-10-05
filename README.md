@@ -2,6 +2,8 @@
 
 # Cinematic Director Camera DSL
 
+**AI Video Camera Control DSL for MiniMax H3, Kling, Veo, FLUX and Qwen Image**
+
 **Control AI video cameras with a real camera language, not vague prompt words.**
 
 Write the shot once. Keep the camera intent. Compile it for each model.
@@ -16,7 +18,7 @@ The same camera intent, compiled for **MiniMax H3 · Kling · Veo · FLUX · Qwe
 
 `104 commands` · `244 aliases` · `8 model adapters` · `5 H3 input modes` · `866/866 tests passing` · `MIT`
 
-A skill for Claude Code, with a Python command line. [30-second demo](#30-second-demo) · [Install](#install) · [Quick start](#quick-start) · [Tested on MiniMax H3](#tested-on-minimax-h3)
+A skill for Claude Code, with a Python command line. It brings real cinematography into AI video prompt engineering, and the camera text fits into any prompt, including a ComfyUI workflow. [30-second demo](#30-second-demo) · [Install](#install) · [Quick start](#quick-start) · [Tested on MiniMax H3](#tested-on-minimax-h3)
 
 ## 30-second demo
 

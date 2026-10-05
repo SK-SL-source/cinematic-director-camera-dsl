@@ -48,7 +48,20 @@
     camera open comes back with its candidates and a question, and effects, editing and time effects stay out of the camera.
 - SOURCES.md lists every project studied as a reference; the maintainer's research notes and raw H3 test records are not part of
     the repository.
-- The entries below (CL-001 to CL-057, in Chinese) record every change since V2_BASELINE.
+- The entries below (CL-001 to CL-058, in Chinese) record every change since V2_BASELINE.
+
+## CL-058 · 2026-10-05 · README 第一屏加上搜尋用的用途描述
+
+- 原因：維護者要求提升 repository 在搜尋引擎的可理解度：README 第一屏要用正常句子說清楚用途與支援的模型。
+- 修改前：第一屏沒有一句同時說出 AI video camera control 與支援模型的描述，也沒有提到 cinematography、prompt engineering 與 ComfyUI。
+- 修改後：H1 下方加一行粗體「AI Video Camera Control DSL for MiniMax H3, Kling, Veo, FLUX and Qwen Image」；介紹那一行加一句
+    「It brings real cinematography into AI video prompt engineering, and the camera text fits into any prompt, including a ComfyUI workflow.」。
+    其餘內容不變。
+- 影響 Command：無
+- 影響 Adapter：無
+- 影響 Test：無
+- 是否破壞 backward compatibility：否
+- 檔案：README.md, CHANGELOG.md
 
 ## CL-057 · 2026-10-04 · Production Example Library：66 個常見說法與敘事情境對應到候選 DSL
 
